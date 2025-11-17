@@ -91,12 +91,21 @@
 
                 <select id="skillType" class="skill-type-select">
                     <option value="continuous">🔄 Habitude continue</option>
-                    <option value="deadline">📅 Objectif avec deadline</option>
+                    <option value="project">🚀 Deep Project</option>
                     <option value="target">🎯 Objectif quantifié</option>
                 </select>
 
-                <div id="deadlineInput" class="additional-input" style="display: none;">
-                    <input type="date" id="deadline" placeholder="Date limite">
+                <div id="projectInput" class="additional-input" style="display: none;">
+                    <div class="milestones-section">
+                        <label>Milestones du projet :</label>
+                        <div id="milestonesContainer">
+                            <div class="milestone-input">
+                                <input type="text" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
+                                <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
+                            </div>
+                        </div>
+                        <button type="button" id="addMilestoneBtn" class="add-milestone-btn">+ Ajouter milestone</button>
+                    </div>
                 </div>
 
                 <div id="targetInput" class="additional-input" style="display: none;">

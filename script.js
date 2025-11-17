@@ -30,9 +30,10 @@ class SkillsTracker {
         this.password = document.getElementById('password');
         this.onboardingModal = document.getElementById('onboardingModal');
         this.skillType = document.getElementById('skillType');
-        this.deadlineInput = document.getElementById('deadlineInput');
+        this.projectInput = document.getElementById('projectInput');
         this.targetInput = document.getElementById('targetInput');
-        this.deadline = document.getElementById('deadline');
+        this.milestonesContainer = document.getElementById('milestonesContainer');
+        this.addMilestoneBtn = document.getElementById('addMilestoneBtn');
         this.target = document.getElementById('target');
         this.targetUnit = document.getElementById('targetUnit');
     }
@@ -47,6 +48,7 @@ class SkillsTracker {
         this.authSwitchLink.addEventListener('click', (e) => this.toggleAuthMode(e));
         this.logoutBtn.addEventListener('click', () => this.logout());
         this.skillType.addEventListener('change', () => this.handleSkillTypeChange());
+        this.addMilestoneBtn.addEventListener('click', () => this.addMilestoneInput());
     }
 
     async checkAuth() {
@@ -180,15 +182,25 @@ class SkillsTracker {
         const type = this.skillType.value;
         
         // Masquer tous les inputs additionnels
-        this.deadlineInput.style.display = 'none';
+        this.projectInput.style.display = 'none';
         this.targetInput.style.display = 'none';
         
         // Afficher l'input approprié
-        if (type === 'deadline') {
-            this.deadlineInput.style.display = 'flex';
+        if (type === 'project') {
+            this.projectInput.style.display = 'block';
         } else if (type === 'target') {
             this.targetInput.style.display = 'flex';
         }
+    }
+
+    addMilestoneInput() {
+        const milestoneDiv = document.createElement('div');
+        milestoneDiv.className = 'milestone-input';
+        milestoneDiv.innerHTML = `
+            <input type="text" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
+            <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
+        `;
+        this.milestonesContainer.appendChild(milestoneDiv);
     }
 
     async addSkill() {
@@ -206,14 +218,18 @@ class SkillsTracker {
         }
 
         // Validation selon le type
-        let deadline = null;
+        let milestones = null;
         let target = null;
         let targetUnit = null;
 
-        if (type === 'deadline') {
-            deadline = this.deadline.value;
-            if (!deadline) {
-                alert('Veuillez sélectionner une date limite');
+        if (type === 'project') {
+            const milestoneInputs = this.milestonesContainer.querySelectorAll('.milestone-name');
+            milestones = Array.from(milestoneInputs)
+                .map(input => input.value.trim())
+                .filter(value => value !== '');
+            
+            if (milestones.length === 0) {
+                alert('Veuillez ajouter au moins un milestone pour votre projet');
                 return;
             }
         } else if (type === 'target') {
@@ -238,7 +254,7 @@ class SkillsTracker {
                         hours: 0, 
                         user_id: this.user.id,
                         type: type,
-                        deadline: deadline,
+                        milestones: milestones ? JSON.stringify(milestones.map(m => ({ name: m, completed: false }))) : null,
                         target: target,
                         target_unit: targetUnit
                     }
@@ -257,10 +273,18 @@ class SkillsTracker {
 
     resetForm() {
         this.skillInput.value = '';
-        this.deadline.value = '';
         this.target.value = '';
         this.targetUnit.value = '';
         this.skillType.value = 'continuous';
+        
+        // Reset milestones
+        this.milestonesContainer.innerHTML = `
+            <div class="milestone-input">
+                <input type="text" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
+                <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
+            </div>
+        `;
+        
         this.handleSkillTypeChange();
     }
 
@@ -324,8 +348,8 @@ class SkillsTracker {
         // Ajuster maxHours selon le type
         if (type === 'target' && target) {
             maxHours = target;
-        } else if (type === 'deadline') {
-            maxHours = 30; // Couleur plus rapide pour les deadlines
+        } else if (type === 'project') {
+            maxHours = 100; // Projets plus longs
         }
         
         const progress = Math.min(hours / maxHours, 1);
@@ -360,27 +384,40 @@ class SkillsTracker {
     renderSkillItem(skill) {
         const typeLabels = {
             continuous: '🔄 Habitude',
-            deadline: '📅 Deadline',
+            project: '🚀 Projet',
             target: '🎯 Objectif'
         };
 
         let progressInfo = '';
-        let deadlineInfo = '';
+        let milestonesInfo = '';
         
         if (skill.type === 'target') {
             const progress = Math.min((skill.hours / skill.target) * 100, 100);
             progressInfo = `<div class="skill-progress">${skill.hours}/${skill.target} ${skill.target_unit} (${Math.round(progress)}%)</div>`;
-        } else if (skill.type === 'deadline') {
-            const deadline = new Date(skill.deadline);
-            const today = new Date();
-            const daysLeft = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
-            const deadlineText = daysLeft > 0 ? `${daysLeft} jours restants` : 
-                                daysLeft === 0 ? 'Aujourd\'hui !' : 
-                                `Dépassé de ${Math.abs(daysLeft)} jours`;
-            deadlineInfo = `<div class="skill-deadline">📅 ${deadlineText}</div>`;
+        } else if (skill.type === 'project' && skill.milestones) {
+            const milestones = JSON.parse(skill.milestones);
+            const completedCount = milestones.filter(m => m.completed).length;
+            const totalCount = milestones.length;
+            
+            milestonesInfo = `
+                <div class="skill-progress">${completedCount}/${totalCount} milestones (${Math.round((completedCount/totalCount)*100)}%)</div>
+                <div class="milestones-list">
+                    ${milestones.map((milestone, index) => `
+                        <div class="milestone-item">
+                            <input type="checkbox" class="milestone-checkbox" 
+                                   ${milestone.completed ? 'checked' : ''} 
+                                   onchange="skillsTracker.toggleMilestone(${skill.id}, ${index})">
+                            <span class="milestone-text ${milestone.completed ? 'completed' : ''}">${milestone.name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
         }
 
-        const isCompleted = skill.type === 'target' && skill.hours >= skill.target;
+        const isCompleted = (skill.type === 'target' && skill.hours >= skill.target) ||
+                           (skill.type === 'project' && skill.milestones && 
+                            JSON.parse(skill.milestones).every(m => m.completed));
+        
         const backgroundColor = isCompleted ? '#10b981' : this.getSkillColor(skill.hours, skill.type, skill.target);
 
         return `
@@ -390,7 +427,7 @@ class SkillsTracker {
                     <div class="skill-name">${skill.name}</div>
                     <div class="skill-hours">${skill.hours} heure${skill.hours !== 1 ? 's' : ''}</div>
                     ${progressInfo}
-                    ${deadlineInfo}
+                    ${milestonesInfo}
                 </div>
                 <div class="skill-controls">
                     ${!isCompleted ? `
@@ -406,6 +443,28 @@ class SkillsTracker {
                 </div>
             </div>
         `;
+    }
+
+    async toggleMilestone(skillId, milestoneIndex) {
+        const skill = this.skills.find(s => s.id === skillId);
+        if (skill && skill.milestones) {
+            try {
+                const milestones = JSON.parse(skill.milestones);
+                milestones[milestoneIndex].completed = !milestones[milestoneIndex].completed;
+                
+                const { error } = await supabase
+                    .from('skills')
+                    .update({ milestones: JSON.stringify(milestones) })
+                    .eq('id', skillId);
+
+                if (error) throw error;
+
+                skill.milestones = JSON.stringify(milestones);
+                this.renderSkills();
+            } catch (error) {
+                alert('Erreur lors de la mise à jour: ' + error.message);
+            }
+        }
     }
 }
 
