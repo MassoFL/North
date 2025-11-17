@@ -86,8 +86,26 @@
         </div>
 
         <div class="add-skill-section">
-            <input type="text" id="skillInput" placeholder="Entrez une nouvelle compétence..." maxlength="50">
-            <button id="addSkillBtn">Ajouter</button>
+            <div class="skill-form">
+                <input type="text" id="skillInput" placeholder="Nom de l'objectif..." maxlength="50" required>
+
+                <select id="skillType" class="skill-type-select">
+                    <option value="continuous">🔄 Habitude continue</option>
+                    <option value="deadline">📅 Objectif avec deadline</option>
+                    <option value="target">🎯 Objectif quantifié</option>
+                </select>
+
+                <div id="deadlineInput" class="additional-input" style="display: none;">
+                    <input type="date" id="deadline" placeholder="Date limite">
+                </div>
+
+                <div id="targetInput" class="additional-input" style="display: none;">
+                    <input type="number" id="target" placeholder="Objectif (ex: 100)" min="1">
+                    <input type="text" id="targetUnit" placeholder="Unité (ex: vidéos)" maxlength="20">
+                </div>
+
+                <button id="addSkillBtn">Ajouter</button>
+            </div>
         </div>
 
         <div class="skills-container" id="skillsContainer">

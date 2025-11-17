@@ -29,6 +29,12 @@ class SkillsTracker {
         this.email = document.getElementById('email');
         this.password = document.getElementById('password');
         this.onboardingModal = document.getElementById('onboardingModal');
+        this.skillType = document.getElementById('skillType');
+        this.deadlineInput = document.getElementById('deadlineInput');
+        this.targetInput = document.getElementById('targetInput');
+        this.deadline = document.getElementById('deadline');
+        this.target = document.getElementById('target');
+        this.targetUnit = document.getElementById('targetUnit');
     }
 
     bindEvents() {
@@ -40,6 +46,7 @@ class SkillsTracker {
         this.authForm.addEventListener('submit', (e) => this.handleAuth(e));
         this.authSwitchLink.addEventListener('click', (e) => this.toggleAuthMode(e));
         this.logoutBtn.addEventListener('click', () => this.logout());
+        this.skillType.addEventListener('change', () => this.handleSkillTypeChange());
     }
 
     async checkAuth() {
@@ -169,17 +176,57 @@ class SkillsTracker {
         }, 300);
     }
 
+    handleSkillTypeChange() {
+        const type = this.skillType.value;
+        
+        // Masquer tous les inputs additionnels
+        this.deadlineInput.style.display = 'none';
+        this.targetInput.style.display = 'none';
+        
+        // Afficher l'input approprié
+        if (type === 'deadline') {
+            this.deadlineInput.style.display = 'flex';
+        } else if (type === 'target') {
+            this.targetInput.style.display = 'flex';
+        }
+    }
+
     async addSkill() {
         const skillName = this.skillInput.value.trim();
+        const type = this.skillType.value;
         
         if (!skillName) {
-            alert('Veuillez entrer un nom de compétence');
+            alert('Veuillez entrer un nom d\'objectif');
             return;
         }
 
         if (this.skills.find(skill => skill.name.toLowerCase() === skillName.toLowerCase())) {
-            alert('Cette compétence existe déjà');
+            alert('Cet objectif existe déjà');
             return;
+        }
+
+        // Validation selon le type
+        let deadline = null;
+        let target = null;
+        let targetUnit = null;
+
+        if (type === 'deadline') {
+            deadline = this.deadline.value;
+            if (!deadline) {
+                alert('Veuillez sélectionner une date limite');
+                return;
+            }
+        } else if (type === 'target') {
+            target = parseInt(this.target.value);
+            targetUnit = this.targetUnit.value.trim();
+            if (!target || target <= 0) {
+                alert('Veuillez entrer un objectif valide');
+                return;
+            }
+            if (!targetUnit) {
+                alert('Veuillez entrer une unité (ex: vidéos, livres)');
+                return;
+            }
         }
 
         try {
@@ -189,7 +236,11 @@ class SkillsTracker {
                     { 
                         name: skillName, 
                         hours: 0, 
-                        user_id: this.user.id 
+                        user_id: this.user.id,
+                        type: type,
+                        deadline: deadline,
+                        target: target,
+                        target_unit: targetUnit
                     }
                 ])
                 .select();
@@ -198,10 +249,19 @@ class SkillsTracker {
 
             this.skills.push(data[0]);
             this.renderSkills();
-            this.skillInput.value = '';
+            this.resetForm();
         } catch (error) {
             alert('Erreur lors de l\'ajout: ' + error.message);
         }
+    }
+
+    resetForm() {
+        this.skillInput.value = '';
+        this.deadline.value = '';
+        this.target.value = '';
+        this.targetUnit.value = '';
+        this.skillType.value = 'continuous';
+        this.handleSkillTypeChange();
     }
 
     async incrementSkill(skillId) {
@@ -258,13 +318,19 @@ class SkillsTracker {
         }
     }
 
-    getSkillColor(hours) {
-        // Transition from green (0 hours) to blue (50+ hours)
-        const maxHours = 50;
+    getSkillColor(hours, type = 'continuous', target = null) {
+        let maxHours = 50;
+        
+        // Ajuster maxHours selon le type
+        if (type === 'target' && target) {
+            maxHours = target;
+        } else if (type === 'deadline') {
+            maxHours = 30; // Couleur plus rapide pour les deadlines
+        }
+        
         const progress = Math.min(hours / maxHours, 1);
         
-        // Green RGB: (34, 197, 94)
-        // Blue RGB: (59, 130, 246)
+        // Green RGB: (34, 197, 94) to Blue RGB: (59, 130, 246)
         const startR = 34, startG = 197, startB = 94;
         const endR = 59, endG = 130, endB = 246;
         
@@ -279,7 +345,7 @@ class SkillsTracker {
         if (this.skills.length === 0) {
             this.skillsContainer.innerHTML = `
                 <div class="empty-state">
-                    Aucune compétence ajoutée. Ajoutez votre première compétence ci-dessus !
+                    Aucun objectif ajouté. Ajoutez votre premier objectif ci-dessus !
                 </div>
             `;
             return;
@@ -287,22 +353,59 @@ class SkillsTracker {
 
         this.skillsContainer.innerHTML = this.skills
             .sort((a, b) => b.hours - a.hours)
-            .map(skill => `
-                <div class="skill-item" style="background-color: ${this.getSkillColor(skill.hours)}">
-                    <div class="skill-info">
-                        <div class="skill-name">${skill.name}</div>
-                        <div class="skill-hours">${skill.hours} heure${skill.hours !== 1 ? 's' : ''}</div>
-                    </div>
-                    <div class="skill-controls">
+            .map(skill => this.renderSkillItem(skill))
+            .join('');
+    }
+
+    renderSkillItem(skill) {
+        const typeLabels = {
+            continuous: '🔄 Habitude',
+            deadline: '📅 Deadline',
+            target: '🎯 Objectif'
+        };
+
+        let progressInfo = '';
+        let deadlineInfo = '';
+        
+        if (skill.type === 'target') {
+            const progress = Math.min((skill.hours / skill.target) * 100, 100);
+            progressInfo = `<div class="skill-progress">${skill.hours}/${skill.target} ${skill.target_unit} (${Math.round(progress)}%)</div>`;
+        } else if (skill.type === 'deadline') {
+            const deadline = new Date(skill.deadline);
+            const today = new Date();
+            const daysLeft = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+            const deadlineText = daysLeft > 0 ? `${daysLeft} jours restants` : 
+                                daysLeft === 0 ? 'Aujourd\'hui !' : 
+                                `Dépassé de ${Math.abs(daysLeft)} jours`;
+            deadlineInfo = `<div class="skill-deadline">📅 ${deadlineText}</div>`;
+        }
+
+        const isCompleted = skill.type === 'target' && skill.hours >= skill.target;
+        const backgroundColor = isCompleted ? '#10b981' : this.getSkillColor(skill.hours, skill.type, skill.target);
+
+        return `
+            <div class="skill-item" style="background-color: ${backgroundColor}">
+                <div class="skill-info">
+                    <div class="skill-type-badge">${typeLabels[skill.type] || '🔄 Habitude'}</div>
+                    <div class="skill-name">${skill.name}</div>
+                    <div class="skill-hours">${skill.hours} heure${skill.hours !== 1 ? 's' : ''}</div>
+                    ${progressInfo}
+                    ${deadlineInfo}
+                </div>
+                <div class="skill-controls">
+                    ${!isCompleted ? `
                         <button class="increment-btn" onclick="skillsTracker.incrementSkill(${skill.id})">
                             +1
                         </button>
-                        <button class="delete-btn" onclick="skillsTracker.deleteSkill(${skill.id})">
-                            Supprimer
-                        </button>
-                    </div>
+                    ` : `
+                        <div class="completed-badge">✅ Terminé</div>
+                    `}
+                    <button class="delete-btn" onclick="skillsTracker.deleteSkill(${skill.id})">
+                        Supprimer
+                    </button>
                 </div>
-            `).join('');
+            </div>
+        `;
     }
 }
 

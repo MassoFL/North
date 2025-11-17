@@ -3,6 +3,10 @@ CREATE TABLE skills (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     hours INTEGER DEFAULT 0,
+    type VARCHAR(20) DEFAULT 'continuous' CHECK (type IN ('continuous', 'deadline', 'target')),
+    deadline DATE,
+    target INTEGER,
+    target_unit VARCHAR(50),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
