@@ -60,6 +60,49 @@
         </div>
     </div>
 
+    <!-- Add Goal Modal -->
+    <div id="addGoalModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouvel objectif</h2>
+                <button class="close-btn" onclick="skillsTracker.closeAddGoalModal()">×</button>
+            </div>
+            
+            <div class="skill-form">
+                <input type="text" id="skillInput" placeholder="Nom de l'objectif..." maxlength="50" required>
+
+                <select id="skillType" class="skill-type-select">
+                    <option value="continuous">Habitude continue</option>
+                    <option value="project">Deep Project</option>
+                    <option value="target">Objectif quantifié</option>
+                </select>
+
+                <div id="projectInput" class="additional-input" style="display: none;">
+                    <div class="milestones-section">
+                        <label>Milestones du projet :</label>
+                        <div id="milestonesContainer">
+                            <div class="milestone-input">
+                                <input type="text" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
+                                <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
+                            </div>
+                        </div>
+                        <button type="button" id="addMilestoneBtn" class="add-milestone-btn">+ Ajouter milestone</button>
+                    </div>
+                </div>
+
+                <div id="targetInput" class="additional-input target-inputs" style="display: none;">
+                    <input type="number" id="target" placeholder="Objectif (ex: 100)" min="1">
+                    <input type="text" id="targetUnit" placeholder="Unité (ex: vidéos)" maxlength="20">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="skillsTracker.closeAddGoalModal()">Annuler</button>
+                    <button id="addSkillBtn" class="primary-btn">Créer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Auth Modal -->
     <div id="authModal" class="modal">
         <div class="modal-content">
@@ -85,36 +128,8 @@
             </div>
         </div>
 
-        <div class="add-skill-section">
-            <div class="skill-form">
-                <input type="text" id="skillInput" placeholder="Nom de l'objectif..." maxlength="50" required>
-
-                <select id="skillType" class="skill-type-select">
-                    <option value="continuous">🔄 Habitude continue</option>
-                    <option value="project">🚀 Deep Project</option>
-                    <option value="target">🎯 Objectif quantifié</option>
-                </select>
-
-                <div id="projectInput" class="additional-input" style="display: none;">
-                    <div class="milestones-section">
-                        <label>Milestones du projet :</label>
-                        <div id="milestonesContainer">
-                            <div class="milestone-input">
-                                <input type="text" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
-                                <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
-                            </div>
-                        </div>
-                        <button type="button" id="addMilestoneBtn" class="add-milestone-btn">+ Ajouter milestone</button>
-                    </div>
-                </div>
-
-                <div id="targetInput" class="additional-input" style="display: none;">
-                    <input type="number" id="target" placeholder="Objectif (ex: 100)" min="1">
-                    <input type="text" id="targetUnit" placeholder="Unité (ex: vidéos)" maxlength="20">
-                </div>
-
-                <button id="addSkillBtn">Ajouter</button>
-            </div>
+        <div class="header-actions">
+            <button id="addGoalBtn" class="add-goal-btn">+ Nouvel objectif</button>
         </div>
 
         <div class="skills-container" id="skillsContainer">

@@ -49,6 +49,11 @@ class SkillsTracker {
         this.logoutBtn.addEventListener('click', () => this.logout());
         this.skillType.addEventListener('change', () => this.handleSkillTypeChange());
         this.addMilestoneBtn.addEventListener('click', () => this.addMilestoneInput());
+        
+        // Add goal modal
+        this.addGoalBtn = document.getElementById('addGoalBtn');
+        this.addGoalModal = document.getElementById('addGoalModal');
+        this.addGoalBtn.addEventListener('click', () => this.openAddGoalModal());
     }
 
     async checkAuth() {
@@ -265,7 +270,7 @@ class SkillsTracker {
 
             this.skills.push(data[0]);
             this.renderSkills();
-            this.resetForm();
+            this.closeAddGoalModal();
         } catch (error) {
             alert('Erreur lors de l\'ajout: ' + error.message);
         }
@@ -286,6 +291,18 @@ class SkillsTracker {
         `;
         
         this.handleSkillTypeChange();
+    }
+
+    openAddGoalModal() {
+        this.addGoalModal.style.display = 'flex';
+        setTimeout(() => {
+            this.skillInput.focus();
+        }, 100);
+    }
+
+    closeAddGoalModal() {
+        this.addGoalModal.style.display = 'none';
+        this.resetForm();
     }
 
     async incrementSkill(skillId) {
@@ -383,9 +400,9 @@ class SkillsTracker {
 
     renderSkillItem(skill) {
         const typeLabels = {
-            continuous: '🔄 Habitude',
-            project: '🚀 Projet',
-            target: '🎯 Objectif'
+            continuous: 'Habitude',
+            project: 'Projet',
+            target: 'Objectif'
         };
 
         let progressInfo = '';
@@ -417,13 +434,11 @@ class SkillsTracker {
         const isCompleted = (skill.type === 'target' && skill.hours >= skill.target) ||
                            (skill.type === 'project' && skill.milestones && 
                             JSON.parse(skill.milestones).every(m => m.completed));
-        
-        const backgroundColor = isCompleted ? '#10b981' : this.getSkillColor(skill.hours, skill.type, skill.target);
 
         return `
-            <div class="skill-item" style="background-color: ${backgroundColor}">
+            <div class="skill-item ${isCompleted ? 'completed' : ''}">
                 <div class="skill-info">
-                    <div class="skill-type-badge">${typeLabels[skill.type] || '🔄 Habitude'}</div>
+                    <div class="skill-type-badge">${typeLabels[skill.type] || 'Habitude'}</div>
                     <div class="skill-name">${skill.name}</div>
                     <div class="skill-hours">${skill.hours} heure${skill.hours !== 1 ? 's' : ''}</div>
                     ${progressInfo}
@@ -435,10 +450,10 @@ class SkillsTracker {
                             +1
                         </button>
                     ` : `
-                        <div class="completed-badge">✅ Terminé</div>
+                        <div class="completed-badge">Terminé</div>
                     `}
                     <button class="delete-btn" onclick="skillsTracker.deleteSkill(${skill.id})">
-                        Supprimer
+                        ×
                     </button>
                 </div>
             </div>
