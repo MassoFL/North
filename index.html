@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skills Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <!-- Onboarding Modal -->
+    <div id="onboardingModal" class="modal" style="display: none;">
+        <div class="onboarding-content">
+            <div class="onboarding-step" id="step1">
+                <div class="onboarding-icon">🚀</div>
+                <h2>Bienvenue dans votre parcours d'excellence</h2>
+                <p>La meilleure startup, c'est <strong>vous-même</strong>. Chaque compétence que vous développez est un
+                    investissement qui rapporte toute votre vie.</p>
+                <button class="onboarding-btn" onclick="skillsTracker.nextOnboardingStep()">Continuer</button>
+            </div>
+
+            <div class="onboarding-step" id="step2" style="display: none;">
+                <div class="onboarding-icon">📚</div>
+                <h2>L'apprentissage n'a pas d'âge</h2>
+                <p>Que vous ayez 16 ou 60 ans, débutant ou expert, il y a toujours quelque chose de nouveau à apprendre.
+                    Chaque heure compte.</p>
+                <button class="onboarding-btn" onclick="skillsTracker.nextOnboardingStep()">J'ai compris</button>
+            </div>
+
+            <div class="onboarding-step" id="step3" style="display: none;">
+                <div class="onboarding-icon">⚡</div>
+                <h2>La consistance fait la différence</h2>
+                <p>1 heure par jour pendant un an = 365 heures de maîtrise. La régularité bat l'intensité sporadique à
+                    tous les coups.</p>
+                <button class="onboarding-btn" onclick="skillsTracker.nextOnboardingStep()">Exactement !</button>
+            </div>
+
+            <div class="onboarding-step" id="step4" style="display: none;">
+                <div class="onboarding-icon">🎯</div>
+                <h2>Comment ça marche ?</h2>
+                <div class="onboarding-instructions">
+                    <div class="instruction">
+                        <span class="step-number">1</span>
+                        <span>Ajoutez vos compétences à développer</span>
+                    </div>
+                    <div class="instruction">
+                        <span class="step-number">2</span>
+                        <span>Cliquez +1 pour chaque heure de pratique</span>
+                    </div>
+                    <div class="instruction">
+                        <span class="step-number">3</span>
+                        <span>Regardez vos compétences évoluer du vert au bleu</span>
+                    </div>
+                </div>
+                <button class="onboarding-btn primary" onclick="skillsTracker.finishOnboarding()">Commencer mon
+                    parcours</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <h2 id="authTitle">Se connecter</h2>
+            <form id="authForm">
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Mot de passe" required>
+                <button type="submit" id="authSubmit">Se connecter</button>
+            </form>
+            <p class="auth-switch">
+                <span id="authSwitchText">Pas de compte ?</span>
+                <a href="#" id="authSwitchLink">S'inscrire</a>
+            </p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Skills Tracker</h1>
+            <div class="user-info" id="userInfo" style="display: none;">
+                <span id="userEmail"></span>
+                <button id="logoutBtn">Déconnexion</button>
+            </div>
+        </div>
+
+        <div class="add-skill-section">
+            <input type="text" id="skillInput" placeholder="Entrez une nouvelle compétence..." maxlength="50">
+            <button id="addSkillBtn">Ajouter</button>
+        </div>
+
+        <div class="skills-container" id="skillsContainer">
+            <!-- Skills will be dynamically added here -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
