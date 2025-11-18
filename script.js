@@ -55,12 +55,21 @@ class SkillsTracker {
         this.addGoalModal = document.getElementById('addGoalModal');
         this.addGoalBtn.addEventListener('click', () => this.openAddGoalModal());
         
+        // Menu utilisateur
+        this.menuToggle = document.getElementById('menuToggle');
+        this.userMenu = document.getElementById('userMenu');
+        this.menuToggle.addEventListener('click', () => this.toggleUserMenu());
+        
         // Fermer les menus quand on clique ailleurs
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.menu-container')) {
                 document.querySelectorAll('.menu-dropdown').forEach(menu => {
                     menu.style.display = 'none';
                 });
+                // Fermer aussi le menu utilisateur
+                if (this.userMenu) {
+                    this.userMenu.style.display = 'none';
+                }
             }
         });
         
@@ -746,6 +755,11 @@ class SkillsTracker {
                 });
             });
         });
+    }
+
+    toggleUserMenu() {
+        const isVisible = this.userMenu.style.display === 'block';
+        this.userMenu.style.display = isVisible ? 'none' : 'block';
     }
 }
 

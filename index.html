@@ -126,7 +126,14 @@
         <div class="header">
             <h1>LokedIn</h1>
             <div class="user-info" id="userInfo" style="display: none;">
-                <button id="logoutBtn">Déconnexion</button>
+                <div class="menu-container">
+                    <button class="menu-toggle" id="menuToggle">
+                        <span class="menu-icon">⋯</span>
+                    </button>
+                    <div class="user-menu" id="userMenu" style="display: none;">
+                        <button id="logoutBtn" class="menu-item">Déconnexion</button>
+                    </div>
+                </div>
             </div>
         </div>
 
