@@ -106,6 +106,15 @@ class SkillsTracker {
         });
         
         this.logoutBtn.addEventListener('click', () => this.logout());
+        
+        // Archive modal
+        this.archiveBtn = document.getElementById('archiveBtn');
+        this.archiveModal = document.getElementById('archiveModal');
+        this.archivedSkillsContainer = document.getElementById('archivedSkillsContainer');
+        this.archiveStats = document.getElementById('archiveStats');
+        this.archiveFilter = document.getElementById('archiveFilter');
+        
+        this.archiveBtn.addEventListener('click', () => this.openArchiveModal());
         this.skillType.addEventListener('change', () => this.handleSkillTypeChange());
         this.addMilestoneBtn.addEventListener('click', () => this.addMilestoneInput());
         
@@ -557,7 +566,8 @@ class SkillsTracker {
             const { data, error } = await supabase
                 .from('skills')
                 .select('*')
-                .eq('user_id', this.user.id);
+                .eq('user_id', this.user.id)
+                .eq('archived', false); // Ne charger que les skills non archivées
 
             if (error) {
                 console.error('Erreur Supabase lors du chargement:', error);
@@ -712,6 +722,11 @@ class SkillsTracker {
                             <button class="menu-item" onclick="skillsTracker.editSkill(${skill.id})">
                                 Modifier
                             </button>
+                            ${isCompleted ? `
+                                <button class="menu-item" onclick="skillsTracker.archiveSkill(${skill.id})">
+                                    📦 Archiver
+                                </button>
+                            ` : ''}
                             <button class="menu-item delete" onclick="skillsTracker.deleteSkill(${skill.id})">
                                 Supprimer
                             </button>
@@ -817,6 +832,211 @@ class SkillsTracker {
         }, 100);
         
         return batteryHTML;
+    }
+
+    async archiveSkill(skillId) {
+        if (confirm('Êtes-vous sûr de vouloir archiver cette tâche terminée ?')) {
+            try {
+                const { error } = await supabase
+                    .from('skills')
+                    .update({ archived: true })
+                    .eq('id', skillId);
+
+                if (error) throw error;
+
+                // Retirer de la liste locale
+                this.skills = this.skills.filter(s => s.id !== skillId);
+                this.renderSkills();
+                
+                // Fermer le menu
+                document.getElementById(`menu-${skillId}`).style.display = 'none';
+            } catch (error) {
+                alert('Erreur lors de l\'archivage: ' + error.message);
+            }
+        }
+    }
+
+    async openArchiveModal() {
+        this.archiveModal.style.display = 'flex';
+        await this.loadArchivedSkills();
+        this.renderArchiveStats();
+        this.renderArchivedSkills();
+        
+        // Fermer le menu utilisateur
+        this.userMenu.style.display = 'none';
+    }
+
+    closeArchiveModal() {
+        this.archiveModal.style.display = 'none';
+        this.archivedSkills = [];
+    }
+
+    async loadArchivedSkills() {
+        try {
+            const { data, error } = await supabase
+                .from('skills')
+                .select('*')
+                .eq('user_id', this.user.id)
+                .eq('archived', true)
+                .order('updated_at', { ascending: false });
+
+            if (error) throw error;
+
+            this.archivedSkills = data || [];
+        } catch (error) {
+            console.error('Erreur lors du chargement des skills archivées:', error);
+            this.archivedSkills = [];
+        }
+    }
+
+    renderArchiveStats() {
+        if (!this.archivedSkills) return;
+
+        const stats = {
+            total: this.archivedSkills.length,
+            continuous: this.archivedSkills.filter(s => s.type === 'continuous').length,
+            project: this.archivedSkills.filter(s => s.type === 'project').length,
+            target: this.archivedSkills.filter(s => s.type === 'target').length,
+            totalHours: this.archivedSkills.reduce((sum, s) => sum + (s.hours || 0), 0)
+        };
+
+        this.archiveStats.innerHTML = `
+            <div class="archive-stat">
+                <span class="archive-stat-number">${stats.total}</span>
+                <div class="archive-stat-label">Tâches terminées</div>
+            </div>
+            <div class="archive-stat">
+                <span class="archive-stat-number">${stats.totalHours}</span>
+                <div class="archive-stat-label">Heures totales</div>
+            </div>
+            <div class="archive-stat">
+                <span class="archive-stat-number">${stats.continuous}</span>
+                <div class="archive-stat-label">Habitudes</div>
+            </div>
+            <div class="archive-stat">
+                <span class="archive-stat-number">${stats.project}</span>
+                <div class="archive-stat-label">Projets</div>
+            </div>
+            <div class="archive-stat">
+                <span class="archive-stat-number">${stats.target}</span>
+                <div class="archive-stat-label">Objectifs</div>
+            </div>
+        `;
+    }
+
+    filterArchive() {
+        this.renderArchivedSkills();
+    }
+
+    renderArchivedSkills() {
+        if (!this.archivedSkills || this.archivedSkills.length === 0) {
+            this.archivedSkillsContainer.innerHTML = `
+                <div class="empty-archive">
+                    Aucune tâche archivée pour le moment.
+                </div>
+            `;
+            return;
+        }
+
+        const filterType = this.archiveFilter.value;
+        const filteredSkills = filterType === 'all' 
+            ? this.archivedSkills 
+            : this.archivedSkills.filter(skill => skill.type === filterType);
+
+        if (filteredSkills.length === 0) {
+            this.archivedSkillsContainer.innerHTML = `
+                <div class="empty-archive">
+                    Aucune tâche archivée de ce type.
+                </div>
+            `;
+            return;
+        }
+
+        this.archivedSkillsContainer.innerHTML = filteredSkills
+            .map(skill => this.renderArchivedSkillItem(skill))
+            .join('');
+    }
+
+    renderArchivedSkillItem(skill) {
+        const typeLabels = {
+            continuous: 'Habitude',
+            project: 'Projet',
+            target: 'Objectif'
+        };
+
+        let completionInfo = '';
+        if (skill.type === 'target') {
+            completionInfo = `${skill.hours}/${skill.target} ${skill.target_unit}`;
+        } else if (skill.type === 'project' && skill.milestones) {
+            const milestones = JSON.parse(skill.milestones);
+            const completedCount = milestones.filter(m => m.completed).length;
+            completionInfo = `${completedCount}/${milestones.length} milestones`;
+        } else {
+            completionInfo = `${skill.hours} heures`;
+        }
+
+        const archiveDate = new Date(skill.updated_at).toLocaleDateString('fr-FR');
+
+        return `
+            <div class="archived-skill-item">
+                <div class="archived-skill-info">
+                    <div class="archived-skill-name">${skill.name}</div>
+                    <div class="archived-skill-details">
+                        ${typeLabels[skill.type]} • ${completionInfo} • Archivé le ${archiveDate}
+                    </div>
+                </div>
+                <div class="archived-skill-actions">
+                    <button class="restore-btn" onclick="skillsTracker.restoreSkill(${skill.id})">
+                        Restaurer
+                    </button>
+                    <button class="delete-archived-btn" onclick="skillsTracker.deleteArchivedSkill(${skill.id})">
+                        Supprimer
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    async restoreSkill(skillId) {
+        if (confirm('Restaurer cette tâche dans vos objectifs actifs ?')) {
+            try {
+                const { error } = await supabase
+                    .from('skills')
+                    .update({ archived: false })
+                    .eq('id', skillId);
+
+                if (error) throw error;
+
+                // Recharger les données
+                await this.loadArchivedSkills();
+                await this.loadSkillsFromDB();
+                
+                this.renderArchiveStats();
+                this.renderArchivedSkills();
+            } catch (error) {
+                alert('Erreur lors de la restauration: ' + error.message);
+            }
+        }
+    }
+
+    async deleteArchivedSkill(skillId) {
+        if (confirm('Supprimer définitivement cette tâche archivée ? Cette action est irréversible.')) {
+            try {
+                const { error } = await supabase
+                    .from('skills')
+                    .delete()
+                    .eq('id', skillId);
+
+                if (error) throw error;
+
+                // Recharger les données
+                await this.loadArchivedSkills();
+                this.renderArchiveStats();
+                this.renderArchivedSkills();
+            } catch (error) {
+                alert('Erreur lors de la suppression: ' + error.message);
+            }
+        }
     }
 
     initializeDragAndDrop() {

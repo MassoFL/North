@@ -547,6 +547,133 @@ h1 {
     justify-content: center;
 }
 
+/* Archive Modal Styles */
+.archive-content {
+    padding: 0 20px 20px 20px;
+}
+
+.archive-stats {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+}
+
+.archive-stat {
+    text-align: center;
+}
+
+.archive-stat-number {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #000;
+    display: block;
+}
+
+.archive-stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 4px;
+}
+
+.archive-filter {
+    margin-bottom: 20px;
+}
+
+.archive-filter select {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.archived-skills-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.archived-skill-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.archived-skill-item:hover {
+    background: #f8f9fa;
+}
+
+.archived-skill-item:last-child {
+    border-bottom: none;
+}
+
+.archived-skill-info {
+    flex: 1;
+}
+
+.archived-skill-name {
+    font-weight: 500;
+    color: #000;
+    margin-bottom: 4px;
+}
+
+.archived-skill-details {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.archived-skill-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.restore-btn {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+.restore-btn:hover {
+    background: #333;
+}
+
+.delete-archived-btn {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+.delete-archived-btn:hover {
+    background: #c82333;
+}
+
+.empty-archive {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-style: italic;
+}
+
 .modal-content {
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(20px);
@@ -982,6 +1109,35 @@ h1 {
     .skill-item.mobile-dragging {
         transform: scale(1.02);
     }
+    
+    /* Archive mobile adjustments */
+    .archive-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 12px;
+    }
+    
+    .archive-stat-number {
+        font-size: 1.2rem;
+    }
+    
+    .archived-skill-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px 12px;
+    }
+    
+    .archived-skill-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .restore-btn, .delete-archived-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+}
     
     .menu-toggle {
         padding: 6px;

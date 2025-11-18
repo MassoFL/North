@@ -106,6 +106,35 @@
         </div>
     </div>
 
+    <!-- Archive Modal -->
+    <div id="archiveModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📦 Archive</h2>
+                <button class="close-btn" onclick="skillsTracker.closeArchiveModal()">×</button>
+            </div>
+            
+            <div class="archive-content">
+                <div class="archive-stats" id="archiveStats">
+                    <!-- Stats will be populated here -->
+                </div>
+                
+                <div class="archive-filter">
+                    <select id="archiveFilter" onchange="skillsTracker.filterArchive()">
+                        <option value="all">Tous les types</option>
+                        <option value="continuous">Habitudes</option>
+                        <option value="project">Projets</option>
+                        <option value="target">Objectifs</option>
+                    </select>
+                </div>
+                
+                <div class="archived-skills-container" id="archivedSkillsContainer">
+                    <!-- Archived skills will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Auth Modal -->
     <div id="authModal" class="modal">
         <div class="modal-content">
@@ -131,6 +160,7 @@
                         <span class="menu-icon">⋯</span>
                     </button>
                     <div class="user-menu" id="userMenu" style="display: none;">
+                        <button id="archiveBtn" class="menu-item">📦 Archive</button>
                         <button id="logoutBtn" class="menu-item">Déconnexion</button>
                     </div>
                 </div>
