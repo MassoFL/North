@@ -772,8 +772,11 @@ class SkillsTracker {
     editSkill(skillId) {
         const skill = this.skills.find(s => s.id === skillId);
         if (skill) {
-            // Fermer le menu
-            document.getElementById(`menu-${skillId}`).style.display = 'none';
+            // Fermer le menu s'il existe (sécurité)
+            const menu = document.getElementById(`menu-${skillId}`);
+            if (menu) {
+                menu.style.display = 'none';
+            }
             
             // Pré-remplir le formulaire avec les données existantes
             this.skillInput.value = skill.name;
@@ -845,8 +848,11 @@ class SkillsTracker {
                 this.skills = this.skills.filter(s => s.id !== skillId);
                 this.renderSkills();
                 
-                // Fermer le menu
-                document.getElementById(`menu-${skillId}`).style.display = 'none';
+                // Fermer le menu s'il existe (sécurité)
+                const menu = document.getElementById(`menu-${skillId}`);
+                if (menu) {
+                    menu.style.display = 'none';
+                }
             } catch (error) {
                 alert('Erreur lors de l\'archivage: ' + error.message);
             }
