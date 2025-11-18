@@ -654,6 +654,9 @@ class SkillsTracker {
     getSkillUnitLabel(skill) {
         if (skill.type === 'continuous') {
             return skill.hours === 1 ? 'point' : 'points';
+        } else if (skill.type === 'target' && skill.target_unit) {
+            // Pour les objectifs quantifiés, utiliser l'unité personnalisée
+            return skill.target_unit;
         } else {
             return skill.hours === 1 ? 'heure' : 'heures';
         }
