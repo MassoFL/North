@@ -22,6 +22,10 @@
     {
       "source": "/Background/(.*)",
       "destination": "/Background/$1"
+    },
+    {
+      "source": "/logo/(.*)",
+      "destination": "/logo/$1"
     }
   ]
 }
