@@ -941,14 +941,12 @@ class SkillsTracker {
             completionInfo = `${skill.hours} heures`;
         }
 
-        const archiveDate = new Date(skill.updated_at).toLocaleDateString('fr-FR');
-
         return `
             <div class="archived-skill-item">
                 <div class="archived-skill-info">
                     <div class="archived-skill-name">${skill.name}</div>
                     <div class="archived-skill-details">
-                        ${typeLabels[skill.type]} • ${completionInfo} • Archivé le ${archiveDate}
+                        ${typeLabels[skill.type]} • ${completionInfo}
                     </div>
                 </div>
                 <div class="archived-skill-actions">
