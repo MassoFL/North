@@ -443,23 +443,29 @@ class SkillsTracker {
                     };
                 }
             } else {
-                // Mode création - calculer le prochain order_index
-                const maxOrder = Math.max(...this.skills.map(s => s.order_index || 0), -1);
+                // Mode création
+                const skillData = { 
+                    name: skillName, 
+                    hours: 0, 
+                    user_id: this.user.id,
+                    type: type,
+                    milestones: milestones ? JSON.stringify(milestones.map(m => ({ name: m, completed: false }))) : null,
+                    target: target,
+                    target_unit: targetUnit
+                };
+
+                // Ajouter order_index seulement si la colonne existe
+                try {
+                    const maxOrder = Math.max(...this.skills.map(s => s.order_index || 0), -1);
+                    skillData.order_index = maxOrder + 1;
+                } catch (e) {
+                    // Ignorer si order_index n'existe pas encore
+                    console.log('order_index column not available yet');
+                }
                 
                 const { data, error } = await supabase
                     .from('skills')
-                    .insert([
-                        { 
-                            name: skillName, 
-                            hours: 0, 
-                            user_id: this.user.id,
-                            type: type,
-                            milestones: milestones ? JSON.stringify(milestones.map(m => ({ name: m, completed: false }))) : null,
-                            target: target,
-                            target_unit: targetUnit,
-                            order_index: maxOrder + 1
-                        }
-                    ])
+                    .insert([skillData])
                     .select();
 
                 if (error) throw error;
@@ -601,15 +607,23 @@ class SkillsTracker {
             return;
         }
 
-        // Trier les skills par order_index
-        const sortedSkills = [...this.skills].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        // Trier les skills par order_index si disponible, sinon par created_at
+        const sortedSkills = [...this.skills].sort((a, b) => {
+            if (a.order_index !== undefined && b.order_index !== undefined) {
+                return a.order_index - b.order_index;
+            }
+            // Fallback sur created_at si order_index n'existe pas
+            return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+        });
 
         this.skillsContainer.innerHTML = sortedSkills
             .map(skill => this.renderSkillItem(skill))
             .join('');
             
-        // Initialiser le drag and drop
-        this.initializeDragAndDrop();
+        // Initialiser le drag and drop seulement si order_index est disponible
+        if (this.skills.length > 0 && this.skills[0].order_index !== undefined) {
+            this.initializeDragAndDrop();
+        }
             
         // Forcer le recalcul des batteries après un délai pour s'assurer que le DOM est prêt
         setTimeout(() => {
@@ -969,6 +983,12 @@ class SkillsTracker {
     }
 
     async updateSkillsOrder() {
+        // Vérifier si order_index est disponible
+        if (this.skills.length === 0 || this.skills[0].order_index === undefined) {
+            console.log('order_index not available, skipping order update');
+            return;
+        }
+
         const skillItems = document.querySelectorAll('.skill-item');
         const updates = [];
         
