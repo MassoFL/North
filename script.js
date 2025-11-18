@@ -640,6 +640,14 @@ class SkillsTracker {
         }, 150);
     }
 
+    getSkillUnitLabel(skill) {
+        if (skill.type === 'continuous') {
+            return skill.hours === 1 ? 'point' : 'points';
+        } else {
+            return skill.hours === 1 ? 'heure' : 'heures';
+        }
+    }
+
     renderSkillItem(skill) {
         const typeLabels = {
             continuous: 'Habitude',
@@ -699,7 +707,7 @@ class SkillsTracker {
                         <div>
                             <div class="skill-type-badge">${typeLabels[skill.type] || 'Habitude'}</div>
                             <div class="skill-name">${skill.name}</div>
-                            <div class="skill-hours">${skill.hours} heure${skill.hours !== 1 ? 's' : ''}</div>
+                            <div class="skill-hours">${skill.hours} ${this.getSkillUnitLabel(skill)}</div>
                         </div>
                     </div>
                     ${progressInfo}
@@ -938,7 +946,7 @@ class SkillsTracker {
             const completedCount = milestones.filter(m => m.completed).length;
             completionInfo = `${completedCount}/${milestones.length} milestones`;
         } else {
-            completionInfo = `${skill.hours} heures`;
+            completionInfo = `${skill.hours} ${this.getSkillUnitLabel(skill)}`;
         }
 
         return `
