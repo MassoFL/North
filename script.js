@@ -443,7 +443,9 @@ class SkillsTracker {
                     };
                 }
             } else {
-                // Mode création
+                // Mode création - calculer le prochain order_index
+                const maxOrder = Math.max(...this.skills.map(s => s.order_index || 0), -1);
+                
                 const { data, error } = await supabase
                     .from('skills')
                     .insert([
@@ -454,7 +456,8 @@ class SkillsTracker {
                             type: type,
                             milestones: milestones ? JSON.stringify(milestones.map(m => ({ name: m, completed: false }))) : null,
                             target: target,
-                            target_unit: targetUnit
+                            target_unit: targetUnit,
+                            order_index: maxOrder + 1
                         }
                     ])
                     .select();
@@ -598,9 +601,15 @@ class SkillsTracker {
             return;
         }
 
-        this.skillsContainer.innerHTML = this.skills
+        // Trier les skills par order_index
+        const sortedSkills = [...this.skills].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+        this.skillsContainer.innerHTML = sortedSkills
             .map(skill => this.renderSkillItem(skill))
             .join('');
+            
+        // Initialiser le drag and drop
+        this.initializeDragAndDrop();
             
         // Forcer le recalcul des batteries après un délai pour s'assurer que le DOM est prêt
         setTimeout(() => {
@@ -657,11 +666,19 @@ class SkillsTracker {
                             JSON.parse(skill.milestones).every(m => m.completed));
 
         return `
-            <div class="skill-item ${isCompleted ? 'completed' : ''}" data-type="${skill.type}">
+            <div class="skill-item ${isCompleted ? 'completed' : ''}" 
+                 data-type="${skill.type}" 
+                 data-skill-id="${skill.id}"
+                 draggable="true">
                 <div class="skill-info">
-                    <div class="skill-type-badge">${typeLabels[skill.type] || 'Habitude'}</div>
-                    <div class="skill-name">${skill.name}</div>
-                    <div class="skill-hours">${skill.hours} heure${skill.hours !== 1 ? 's' : ''}</div>
+                    <div style="display: flex; align-items: center;">
+                        <div class="drag-handle">⋮⋮</div>
+                        <div>
+                            <div class="skill-type-badge">${typeLabels[skill.type] || 'Habitude'}</div>
+                            <div class="skill-name">${skill.name}</div>
+                            <div class="skill-hours">${skill.hours} heure${skill.hours !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
                     ${progressInfo}
                     ${milestonesInfo}
                 </div>
@@ -786,6 +803,174 @@ class SkillsTracker {
         }, 100);
         
         return batteryHTML;
+    }
+
+    initializeDragAndDrop() {
+        const skillItems = document.querySelectorAll('.skill-item');
+        
+        skillItems.forEach(item => {
+            // Desktop drag and drop
+            item.addEventListener('dragstart', (e) => this.handleDragStart(e));
+            item.addEventListener('dragend', (e) => this.handleDragEnd(e));
+            item.addEventListener('dragover', (e) => this.handleDragOver(e));
+            item.addEventListener('drop', (e) => this.handleDrop(e));
+            
+            // Mobile touch events
+            let longPressTimer;
+            let isDragging = false;
+            let startY = 0;
+            
+            item.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                longPressTimer = setTimeout(() => {
+                    if (!isDragging) {
+                        isDragging = true;
+                        item.classList.add('long-press');
+                        navigator.vibrate && navigator.vibrate(50); // Vibration si supportée
+                        setTimeout(() => {
+                            item.classList.remove('long-press');
+                            item.classList.add('mobile-dragging');
+                        }, 600);
+                    }
+                }, 500); // 500ms pour l'appui long
+            });
+            
+            item.addEventListener('touchmove', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                if (isDragging) {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const currentY = touch.clientY;
+                    
+                    // Trouver l'élément sous le doigt
+                    const elementBelow = document.elementFromPoint(touch.clientX, currentY);
+                    const skillBelow = elementBelow?.closest('.skill-item');
+                    
+                    if (skillBelow && skillBelow !== item) {
+                        this.handleMobileReorder(item, skillBelow, currentY);
+                    }
+                }
+            });
+            
+            item.addEventListener('touchend', (e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                if (isDragging) {
+                    isDragging = false;
+                    item.classList.remove('mobile-dragging', 'long-press');
+                    this.finalizeMobileReorder();
+                }
+            });
+        });
+    }
+
+    handleDragStart(e) {
+        this.draggedElement = e.target;
+        e.target.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', e.target.outerHTML);
+    }
+
+    handleDragEnd(e) {
+        e.target.classList.remove('dragging');
+        this.draggedElement = null;
+        
+        // Nettoyer les placeholders
+        document.querySelectorAll('.drag-placeholder').forEach(p => p.remove());
+        document.querySelectorAll('.drag-over').forEach(item => item.classList.remove('drag-over'));
+    }
+
+    handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        const afterElement = this.getDragAfterElement(this.skillsContainer, e.clientY);
+        const draggedElement = this.draggedElement;
+        
+        if (afterElement == null) {
+            this.skillsContainer.appendChild(draggedElement);
+        } else {
+            this.skillsContainer.insertBefore(draggedElement, afterElement);
+        }
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+        this.updateSkillsOrder();
+    }
+
+    handleMobileReorder(draggedItem, targetItem, currentY) {
+        const targetRect = targetItem.getBoundingClientRect();
+        const targetMiddle = targetRect.top + targetRect.height / 2;
+        
+        if (currentY < targetMiddle) {
+            // Insérer avant
+            targetItem.parentNode.insertBefore(draggedItem, targetItem);
+        } else {
+            // Insérer après
+            targetItem.parentNode.insertBefore(draggedItem, targetItem.nextSibling);
+        }
+    }
+
+    finalizeMobileReorder() {
+        this.updateSkillsOrder();
+    }
+
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.skill-item:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    async updateSkillsOrder() {
+        const skillItems = document.querySelectorAll('.skill-item');
+        const updates = [];
+        
+        skillItems.forEach((item, index) => {
+            const skillId = parseInt(item.dataset.skillId);
+            const skill = this.skills.find(s => s.id === skillId);
+            
+            if (skill && skill.order_index !== index) {
+                skill.order_index = index;
+                updates.push({
+                    id: skillId,
+                    order_index: index
+                });
+            }
+        });
+        
+        // Mettre à jour en base de données
+        if (updates.length > 0) {
+            try {
+                for (const update of updates) {
+                    await supabase
+                        .from('skills')
+                        .update({ order_index: update.order_index })
+                        .eq('id', update.id);
+                }
+                console.log('Ordre mis à jour:', updates);
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour de l\'ordre:', error);
+                // Recharger les skills en cas d'erreur
+                await this.loadSkillsFromDB();
+            }
+        }
     }
 
     calculateOptimalBars(batteryId, filledBars, totalBars) {

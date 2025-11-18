@@ -6,7 +6,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #ffffff url('./Background/pexels-hngstrm-1939485.jpg') center center/cover no-repeat;
+    background: #ffffff url('/Background/pexels-hngstrm-1939485.jpg') center center/cover no-repeat;
     color: #000000;
     line-height: 1.6;
     min-height: 100vh;
@@ -148,6 +148,81 @@ h1 {
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+/* Drag and Drop Styles */
+.skill-item {
+    cursor: grab;
+    user-select: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.skill-item:active {
+    cursor: grabbing;
+}
+
+.skill-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.skill-item.drag-over {
+    transform: translateY(-2px);
+    border-color: #000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.drag-placeholder {
+    height: 4px;
+    background: #000;
+    border-radius: 2px;
+    margin: 8px 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.drag-placeholder.active {
+    opacity: 1;
+}
+
+/* Mobile drag styles */
+.skill-item.long-press {
+    animation: longPressAnimation 0.6s ease-in-out;
+}
+
+@keyframes longPressAnimation {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.skill-item.mobile-dragging {
+    opacity: 0.8;
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+/* Drag handle indicator */
+.drag-handle {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: #999;
+    font-size: 18px;
+    cursor: grab;
+    padding: 4px;
+    margin-right: 8px;
+}
+
+.skill-item:hover .drag-handle {
+    opacity: 1;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
 }
 
 .skill-item {
@@ -887,6 +962,16 @@ h1 {
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
+    }
+    
+    /* Mobile drag adjustments */
+    .drag-handle {
+        opacity: 1; /* Toujours visible sur mobile */
+        font-size: 16px;
+    }
+    
+    .skill-item.mobile-dragging {
+        transform: scale(1.02);
     }
     
     .menu-toggle {
