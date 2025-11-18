@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
-    <title>Skills Tracker</title>
+    <title>LokedIn</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -46,15 +46,15 @@
                 <div class="onboarding-instructions">
                     <div class="instruction">
                         <span class="step-number">1</span>
-                        <span>Ajoutez vos compétences à développer</span>
+                        <span>Ajoutez vos objectifs à développer</span>
                     </div>
                     <div class="instruction">
                         <span class="step-number">2</span>
-                        <span>Cliquez +1 pour chaque heure de pratique</span>
+                        <span>Cliquez + pour chaque heure de pratique</span>
                     </div>
                     <div class="instruction">
                         <span class="step-number">3</span>
-                        <span>Regardez vos compétences évoluer du vert au bleu</span>
+                        <span>Regardez vos barres de progression se remplir</span>
                     </div>
                 </div>
                 <button class="onboarding-btn primary" onclick="skillsTracker.finishOnboarding()">Commencer mon
@@ -124,9 +124,8 @@
 
     <div class="container">
         <div class="header">
-            <h1>Skills Tracker</h1>
+            <h1>LokedIn</h1>
             <div class="user-info" id="userInfo" style="display: none;">
-                <span id="userEmail"></span>
                 <button id="logoutBtn">Déconnexion</button>
             </div>
         </div>

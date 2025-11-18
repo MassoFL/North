@@ -25,7 +25,6 @@ class SkillsTracker {
         this.authSwitchText = document.getElementById('authSwitchText');
         this.authSwitchLink = document.getElementById('authSwitchLink');
         this.userInfo = document.getElementById('userInfo');
-        this.userEmail = document.getElementById('userEmail');
         this.logoutBtn = document.getElementById('logoutBtn');
         this.email = document.getElementById('email');
         this.password = document.getElementById('password');
@@ -113,7 +112,6 @@ class SkillsTracker {
         this.authModal.style.display = 'none';
         document.querySelector('.container').style.display = 'block';
         this.userInfo.style.display = 'flex';
-        this.userEmail.textContent = this.user.email;
         this.renderSkills();
     }
 
@@ -465,7 +463,6 @@ class SkillsTracker {
         }
 
         this.skillsContainer.innerHTML = this.skills
-            .sort((a, b) => b.hours - a.hours)
             .map(skill => this.renderSkillItem(skill))
             .join('');
             

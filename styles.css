@@ -205,27 +205,15 @@ h1 {
     transition: all 0.3s ease;
 }
 
-.battery-bar.active {
-    background: #fff;
-    box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
-}
 
-/* Animation progressive pour les barres - couleurs du rouge au vert */
-.battery-bar.active {
-    background: #fff;
-    border-color: #fff;
-}
 
-/* Pour les objectifs quantifiés - couleur progressive basée sur le pourcentage */
-.skill-item[data-type="target"] .battery-bar.active {
+
+
+/* Barres remplies - vert pour tous les types */
+.battery-bar.active {
     background: #44ff44;
     border-color: #44ff44;
-}
-
-/* Pour les projets (nombre variable de barres) */
-.skill-item[data-type="project"] .battery-bar.active {
-    background: #44ff44;
-    border-color: #44ff44;
+    box-shadow: 0 0 3px rgba(68, 255, 68, 0.3);
 }
 
 /* Adaptation dynamique selon la largeur disponible */
@@ -242,9 +230,9 @@ h1 {
 .battery-bar {
     width: var(--bar-width, 8px);
     height: 12px;
-    background: rgba(255, 255, 255, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 1px;
+    background: transparent;
+    border: 1px solid #999;
+    border-radius: 2px;
     transition: all 0.3s ease;
     min-width: 2px; /* largeur minimale */
     flex-shrink: 0; /* Empêche la compression */
