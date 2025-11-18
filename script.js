@@ -713,7 +713,7 @@ class SkillsTracker {
                         </button>
                     ` : `
                         <button class="archive-btn" draggable="false" onclick="skillsTracker.archiveSkill(${skill.id})">
-                            📦 Archiver
+                            Archiver
                         </button>
                     `}
                     <div class="menu-container">
