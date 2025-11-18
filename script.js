@@ -388,9 +388,20 @@ class SkillsTracker {
             return;
         }
 
-        // Vérifier les doublons seulement si ce n'est pas une édition
-        if (!this.editingSkillId && this.skills.find(skill => skill.name.toLowerCase() === skillName.toLowerCase())) {
-            alert('Cet objectif existe déjà');
+        // Vérifier les doublons (même nom ET même type)
+        const duplicateSkill = this.skills.find(skill => 
+            skill.name.toLowerCase() === skillName.toLowerCase() && 
+            skill.type === type &&
+            skill.id !== this.editingSkillId // Exclure la tâche en cours d'édition
+        );
+        
+        if (duplicateSkill) {
+            const typeLabels = {
+                continuous: 'habitude',
+                project: 'projet',
+                target: 'objectif'
+            };
+            alert(`Une ${typeLabels[type]} avec ce nom existe déjà`);
             return;
         }
 
