@@ -712,7 +712,9 @@ class SkillsTracker {
                             +
                         </button>
                     ` : `
-                        <div class="completed-badge">Terminé</div>
+                        <button class="archive-btn" draggable="false" onclick="skillsTracker.archiveSkill(${skill.id})">
+                            📦 Archiver
+                        </button>
                     `}
                     <div class="menu-container">
                         <button class="menu-btn" draggable="false" onclick="skillsTracker.toggleMenu(${skill.id})">
@@ -722,11 +724,6 @@ class SkillsTracker {
                             <button class="menu-item" onclick="skillsTracker.editSkill(${skill.id})">
                                 Modifier
                             </button>
-                            ${isCompleted ? `
-                                <button class="menu-item" onclick="skillsTracker.archiveSkill(${skill.id})">
-                                    📦 Archiver
-                                </button>
-                            ` : ''}
                             <button class="menu-item delete" onclick="skillsTracker.deleteSkill(${skill.id})">
                                 Supprimer
                             </button>

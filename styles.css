@@ -440,6 +440,25 @@ h1 {
     font-weight: 500;
 }
 
+.archive-btn {
+    background: #6c757d;
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.archive-btn:hover {
+    background: #5a6268;
+}
+
 .delete-btn {
     background: transparent;
     color: #999;
@@ -1195,6 +1214,11 @@ h1 {
         width: 36px;
         height: 36px;
         font-size: 18px;
+    }
+    
+    .archive-btn {
+        padding: 10px 12px;
+        font-size: 11px;
     }
     
     .menu-btn {
