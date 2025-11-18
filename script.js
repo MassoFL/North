@@ -1,7 +1,35 @@
 // Supabase configuration
 const supabaseUrl = 'https://xfiytwnqkljoqvlqghjq.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmaXl0d25xa2xqb3F2bHFnaGpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNzQ5MTIsImV4cCI6MjA3ODk1MDkxMn0.1tRrcRHy3AHIydP6d5PE18T4R6ys4sZTIlW6uDQZIyo';
+
+console.log('Configuration Supabase:', { supabaseUrl, supabaseKey: supabaseKey.substring(0, 20) + '...' });
+console.log('Environment:', { 
+    protocol: window.location.protocol, 
+    host: window.location.host,
+    isProduction: window.location.host.includes('vercel.app')
+});
+
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+console.log('Client Supabase créé:', supabase);
+
+// Test de base pour vérifier que Supabase fonctionne
+if (!window.supabase) {
+    console.error('ERREUR: Supabase n\'est pas chargé!');
+    console.log('Tentative de rechargement de Supabase...');
+    
+    // Essayer de recharger Supabase
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    script.onload = () => {
+        console.log('Supabase rechargé avec succès');
+        window.location.reload();
+    };
+    script.onerror = () => {
+        alert('Erreur: Impossible de charger Supabase. Problème de réseau ou de CDN.');
+    };
+    document.head.appendChild(script);
+}
 
 class SkillsTracker {
     constructor() {
@@ -15,6 +43,8 @@ class SkillsTracker {
     }
 
     initializeElements() {
+        console.log('Initializing elements...');
+        
         this.skillInput = document.getElementById('skillInput');
         this.addSkillBtn = document.getElementById('addSkillBtn');
         this.skillsContainer = document.getElementById('skillsContainer');
@@ -36,16 +66,45 @@ class SkillsTracker {
         this.addMilestoneBtn = document.getElementById('addMilestoneBtn');
         this.target = document.getElementById('target');
         this.targetUnit = document.getElementById('targetUnit');
+        
+        // Vérifier que les éléments critiques existent
+        if (!this.authForm) {
+            console.error('ERREUR: authForm non trouvé!');
+        }
+        if (!this.email) {
+            console.error('ERREUR: email input non trouvé!');
+        }
+        if (!this.password) {
+            console.error('ERREUR: password input non trouvé!');
+        }
+        
+        console.log('Elements initialized:', {
+            authForm: !!this.authForm,
+            email: !!this.email,
+            password: !!this.password,
+            authSubmit: !!this.authSubmit
+        });
     }
 
     bindEvents() {
+        console.log('Binding events...');
+        
         this.addSkillBtn.addEventListener('click', () => this.addSkill());
         this.skillInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addSkill();
         });
         
-        this.authForm.addEventListener('submit', (e) => this.handleAuth(e));
-        this.authSwitchLink.addEventListener('click', (e) => this.toggleAuthMode(e));
+        console.log('Binding auth form...');
+        this.authForm.addEventListener('submit', (e) => {
+            console.log('Form submitted!');
+            this.handleAuth(e);
+        });
+        
+        this.authSwitchLink.addEventListener('click', (e) => {
+            console.log('Auth switch clicked!');
+            this.toggleAuthMode(e);
+        });
+        
         this.logoutBtn.addEventListener('click', () => this.logout());
         this.skillType.addEventListener('change', () => this.handleSkillTypeChange());
         this.addMilestoneBtn.addEventListener('click', () => this.addMilestoneInput());
@@ -94,20 +153,36 @@ class SkillsTracker {
     }
 
     async checkAuth() {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-            this.user = session.user;
-            await this.loadSkillsFromDB();
+        try {
+            console.log('Vérification de l\'authentification...');
+            const { data: { session }, error } = await supabase.auth.getSession();
             
-            // Vérifier si l'utilisateur a déjà vu l'onboarding
-            const hasSeenOnboarding = localStorage.getItem(`onboarding_${this.user.id}`);
-            if (!hasSeenOnboarding && this.skills.length === 0) {
-                this.showOnboarding();
-            } else {
-                this.showApp();
+            console.log('Session check result:', { session, error, environment: window.location.host });
+            
+            if (error) {
+                console.error('Erreur lors de la vérification de session:', error);
+                this.showAuth();
+                return;
             }
-        } else {
+            
+            if (session) {
+                console.log('Session trouvée:', session.user);
+                this.user = session.user;
+                await this.loadSkillsFromDB();
+                
+                // Vérifier si l'utilisateur a déjà vu l'onboarding
+                const hasSeenOnboarding = localStorage.getItem(`onboarding_${this.user.id}`);
+                if (!hasSeenOnboarding && this.skills.length === 0) {
+                    this.showOnboarding();
+                } else {
+                    this.showApp();
+                }
+            } else {
+                console.log('Aucune session trouvée, affichage de l\'auth');
+                this.showAuth();
+            }
+        } catch (error) {
+            console.error('Erreur dans checkAuth:', error);
             this.showAuth();
         }
     }
@@ -118,10 +193,12 @@ class SkillsTracker {
     }
 
     showApp() {
+        console.log('Affichage de l\'app...');
         this.authModal.style.display = 'none';
         document.querySelector('.container').style.display = 'block';
         this.userInfo.style.display = 'flex';
         this.renderSkills();
+        console.log('App affichée avec succès');
     }
 
     toggleAuthMode(e) {
@@ -142,21 +219,56 @@ class SkillsTracker {
     }
 
     async handleAuth(e) {
+        console.log('handleAuth called!', e);
         e.preventDefault();
+        
+        if (!this.email || !this.password) {
+            console.error('ERREUR: Elements email/password manquants!');
+            alert('Erreur: Éléments de formulaire manquants');
+            return;
+        }
+        
         const email = this.email.value;
         const password = this.password.value;
         const isLogin = this.authTitle.textContent === 'Se connecter';
 
+        console.log('Tentative de connexion:', { 
+            email, 
+            password: password ? '***' : 'empty', 
+            isLogin,
+            environment: window.location.host,
+            supabaseUrl: supabaseUrl
+        });
+        
+        if (!email || !password) {
+            alert('Veuillez remplir tous les champs');
+            return;
+        }
+
         try {
             let result;
             if (isLogin) {
+                console.log('Connexion avec Supabase...');
                 result = await supabase.auth.signInWithPassword({ email, password });
             } else {
+                console.log('Inscription avec Supabase...');
                 result = await supabase.auth.signUp({ email, password });
             }
 
+            console.log('Résultat Supabase complet:', {
+                data: result.data,
+                error: result.error,
+                session: result.data?.session,
+                user: result.data?.user
+            });
+
             if (result.error) {
-                alert('Erreur: ' + result.error.message);
+                console.error('Erreur Supabase détaillée:', {
+                    message: result.error.message,
+                    status: result.error.status,
+                    details: result.error
+                });
+                alert('Erreur de connexion: ' + result.error.message);
                 return;
             }
 
@@ -165,18 +277,27 @@ class SkillsTracker {
                 return;
             }
 
+            console.log('Utilisateur connecté:', result.data.user);
             this.user = result.data.user;
+            
+            console.log('Chargement des skills...');
             await this.loadSkillsFromDB();
             
             // Vérifier si c'est un nouvel utilisateur
             const hasSeenOnboarding = localStorage.getItem(`onboarding_${this.user.id}`);
+            console.log('Onboarding vu:', hasSeenOnboarding, 'Skills:', this.skills.length);
+            
             if (!hasSeenOnboarding && this.skills.length === 0) {
+                console.log('Affichage onboarding');
                 this.showOnboarding();
             } else {
+                console.log('Affichage app');
                 this.showApp();
             }
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            console.error('Erreur dans handleAuth:', error);
+            console.error('Stack trace:', error.stack);
+            alert('Erreur technique: ' + error.message);
         }
     }
 
@@ -423,18 +544,24 @@ class SkillsTracker {
 
     async loadSkillsFromDB() {
         try {
+            console.log('Chargement des skills pour user:', this.user.id);
             const { data, error } = await supabase
                 .from('skills')
                 .select('*')
                 .eq('user_id', this.user.id);
 
-            if (error) throw error;
+            if (error) {
+                console.error('Erreur Supabase lors du chargement:', error);
+                throw error;
+            }
 
+            console.log('Skills chargées:', data);
             this.skills = data || [];
             this.renderSkills();
         } catch (error) {
-            console.error('Erreur lors du chargement:', error);
+            console.error('Erreur lors du chargement des skills:', error);
             this.skills = [];
+            // Ne pas bloquer la connexion si les skills ne se chargent pas
         }
     }
 
@@ -694,7 +821,6 @@ class SkillsTracker {
         const maxPossibleBars = Math.max(1, Math.floor(containerWidth / (minBarWidth + gap)));
         
         // Limiter le nombre de barres selon la taille d'écran
-        const screenWidth = window.innerWidth;
         let maxBarsLimit;
         if (screenWidth <= 480) {
             maxBarsLimit = Math.min(maxPossibleBars, 20); // Max 20 barres sur très petit écran
