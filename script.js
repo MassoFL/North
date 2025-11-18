@@ -111,7 +111,6 @@ class SkillsTracker {
         this.archiveBtn = document.getElementById('archiveBtn');
         this.archiveModal = document.getElementById('archiveModal');
         this.archivedSkillsContainer = document.getElementById('archivedSkillsContainer');
-        this.archiveStats = document.getElementById('archiveStats');
         this.archiveFilter = document.getElementById('archiveFilter');
         
         this.archiveBtn.addEventListener('click', () => this.openArchiveModal());
@@ -862,7 +861,6 @@ class SkillsTracker {
     async openArchiveModal() {
         this.archiveModal.style.display = 'flex';
         await this.loadArchivedSkills();
-        this.renderArchiveStats();
         this.renderArchivedSkills();
         
         // Fermer le menu utilisateur
@@ -890,41 +888,6 @@ class SkillsTracker {
             console.error('Erreur lors du chargement des skills archivées:', error);
             this.archivedSkills = [];
         }
-    }
-
-    renderArchiveStats() {
-        if (!this.archivedSkills) return;
-
-        const stats = {
-            total: this.archivedSkills.length,
-            continuous: this.archivedSkills.filter(s => s.type === 'continuous').length,
-            project: this.archivedSkills.filter(s => s.type === 'project').length,
-            target: this.archivedSkills.filter(s => s.type === 'target').length,
-            totalHours: this.archivedSkills.reduce((sum, s) => sum + (s.hours || 0), 0)
-        };
-
-        this.archiveStats.innerHTML = `
-            <div class="archive-stat">
-                <span class="archive-stat-number">${stats.total}</span>
-                <div class="archive-stat-label">Tâches terminées</div>
-            </div>
-            <div class="archive-stat">
-                <span class="archive-stat-number">${stats.totalHours}</span>
-                <div class="archive-stat-label">Heures totales</div>
-            </div>
-            <div class="archive-stat">
-                <span class="archive-stat-number">${stats.continuous}</span>
-                <div class="archive-stat-label">Habitudes</div>
-            </div>
-            <div class="archive-stat">
-                <span class="archive-stat-number">${stats.project}</span>
-                <div class="archive-stat-label">Projets</div>
-            </div>
-            <div class="archive-stat">
-                <span class="archive-stat-number">${stats.target}</span>
-                <div class="archive-stat-label">Objectifs</div>
-            </div>
-        `;
     }
 
     filterArchive() {
@@ -1014,7 +977,6 @@ class SkillsTracker {
                 await this.loadArchivedSkills();
                 await this.loadSkillsFromDB();
                 
-                this.renderArchiveStats();
                 this.renderArchivedSkills();
             } catch (error) {
                 alert('Erreur lors de la restauration: ' + error.message);
@@ -1034,7 +996,6 @@ class SkillsTracker {
 
                 // Recharger les données
                 await this.loadArchivedSkills();
-                this.renderArchiveStats();
                 this.renderArchivedSkills();
             } catch (error) {
                 alert('Erreur lors de la suppression: ' + error.message);
