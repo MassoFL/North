@@ -180,6 +180,104 @@ h1 {
     opacity: 0.6;
 }
 
+/* Battery Indicator */
+.battery-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    width: 100%;
+    min-height: 14px; /* Assure une hauteur minimale */
+}
+
+.battery-bars {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+}
+
+.battery-bar {
+    width: 8px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 1px;
+    transition: all 0.3s ease;
+}
+
+.battery-bar.active {
+    background: #fff;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+}
+
+/* Animation progressive pour les barres - couleurs du rouge au vert */
+.battery-bar.active {
+    background: #fff;
+    border-color: #fff;
+}
+
+/* Pour les objectifs quantifiés - couleur progressive basée sur le pourcentage */
+.skill-item[data-type="target"] .battery-bar.active {
+    background: #44ff44;
+    border-color: #44ff44;
+}
+
+/* Pour les projets (nombre variable de barres) */
+.skill-item[data-type="project"] .battery-bar.active {
+    background: #44ff44;
+    border-color: #44ff44;
+}
+
+/* Adaptation dynamique selon la largeur disponible */
+.battery-bars {
+    display: flex;
+    align-items: flex-end;
+    min-width: 20px; /* Largeur minimale pour éviter l'effondrement */
+    height: 12px; /* Hauteur fixe pour stabilité */
+    gap: var(--bar-gap, 1px);
+    width: var(--container-width, auto);
+}
+
+/* Styles de base pour les barres (largeur définie par CSS variable) */
+.battery-bar {
+    width: var(--bar-width, 8px);
+    height: 12px;
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 1px;
+    transition: all 0.3s ease;
+    min-width: 2px; /* largeur minimale */
+    flex-shrink: 0; /* Empêche la compression */
+}
+
+/* Ajustement de hauteur selon la densité */
+.battery-bars.dense .battery-bar {
+    height: 10px;
+}
+
+.battery-bars.very-dense .battery-bar {
+    height: 8px;
+}
+
+/* Tooltip pour les barres */
+.battery-bar {
+    cursor: help;
+}
+
+.battery-bar:hover {
+    transform: scale(1.1);
+    z-index: 1;
+}
+
+.battery-percentage {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+    min-width: 35px;
+    flex-shrink: 0; /* Empêche la compression */
+    text-align: right;
+}
+
 /* Controls */
 .skill-controls {
     display: flex;
@@ -195,9 +293,12 @@ h1 {
     width: 40px;
     height: 40px;
     cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 300;
     transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .increment-btn:hover {
@@ -227,6 +328,71 @@ h1 {
 .delete-btn:hover {
     background: #f5f5f5;
     color: #666;
+}
+
+/* Menu Dropdown */
+.menu-container {
+    position: relative;
+}
+
+.menu-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-btn:hover {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    min-width: 120px;
+    overflow: hidden;
+}
+
+.menu-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+    transition: background 0.2s;
+}
+
+.menu-item:hover {
+    background: #f5f5f5;
+}
+
+.menu-item.delete {
+    color: #dc3545;
+}
+
+.menu-item.delete:hover {
+    background: #fff5f5;
 }
 
 /* Empty State */
@@ -696,10 +862,47 @@ h1 {
         font-size: 0.8rem;
     }
     
+    .battery-indicator {
+        gap: 6px;
+    }
+    
+    .battery-bar {
+        width: 6px;
+        height: 10px;
+    }
+    
+    .battery-percentage {
+        font-size: 0.7rem;
+        min-width: 30px;
+    }
+    
+    .battery-indicator {
+        gap: 6px;
+    }
+    
+    .battery-bars {
+        min-width: 15px;
+        height: 10px;
+    }
+    
+    .battery-bar {
+        height: 10px;
+    }
+    
     .increment-btn {
         width: 36px;
         height: 36px;
-        font-size: 14px;
+        font-size: 18px;
+    }
+    
+    .menu-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
+    
+    .menu-dropdown {
+        right: -10px;
     }
     
     .modal-content {
@@ -766,6 +969,24 @@ h1 {
     .delete-btn {
         padding: 4px 8px;
         font-size: 10px;
+    }
+    
+    .battery-indicator {
+        gap: 4px;
+    }
+    
+    .battery-percentage {
+        font-size: 0.65rem;
+        min-width: 25px;
+    }
+    
+    .battery-bars {
+        min-width: 10px;
+        height: 8px;
+    }
+    
+    .battery-bar {
+        height: 8px;
     }
 }
 

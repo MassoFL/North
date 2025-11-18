@@ -8,6 +8,7 @@ class SkillsTracker {
         this.skills = [];
         this.user = null;
         this.currentOnboardingStep = 1;
+        this.editingSkillId = null;
         this.initializeElements();
         this.bindEvents();
         this.checkAuth();
@@ -54,6 +55,34 @@ class SkillsTracker {
         this.addGoalBtn = document.getElementById('addGoalBtn');
         this.addGoalModal = document.getElementById('addGoalModal');
         this.addGoalBtn.addEventListener('click', () => this.openAddGoalModal());
+        
+        // Fermer les menus quand on clique ailleurs
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-container')) {
+                document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+        });
+        
+        // Recalculer les barres lors du redimensionnement avec debounce
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                this.recalculateAllBatteries();
+            }, 50); // Délai réduit pour plus de réactivité
+        });
+        
+        // Observer pour détecter les changements de taille des éléments
+        if (window.ResizeObserver) {
+            this.resizeObserver = new ResizeObserver((entries) => {
+                clearTimeout(this.observerTimeout);
+                this.observerTimeout = setTimeout(() => {
+                    this.recalculateAllBatteries();
+                }, 100);
+            });
+        }
     }
 
     async checkAuth() {
@@ -148,6 +177,12 @@ class SkillsTracker {
         await supabase.auth.signOut();
         this.user = null;
         this.skills = [];
+        
+        // Nettoyer les observers
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
+        
         this.showAuth();
         this.email.value = '';
         this.password.value = '';
@@ -217,7 +252,8 @@ class SkillsTracker {
             return;
         }
 
-        if (this.skills.find(skill => skill.name.toLowerCase() === skillName.toLowerCase())) {
+        // Vérifier les doublons seulement si ce n'est pas une édition
+        if (!this.editingSkillId && this.skills.find(skill => skill.name.toLowerCase() === skillName.toLowerCase())) {
             alert('Cet objectif existe déjà');
             return;
         }
@@ -251,28 +287,59 @@ class SkillsTracker {
         }
 
         try {
-            const { data, error } = await supabase
-                .from('skills')
-                .insert([
-                    { 
-                        name: skillName, 
-                        hours: 0, 
-                        user_id: this.user.id,
+            if (this.editingSkillId) {
+                // Mode édition
+                const { error } = await supabase
+                    .from('skills')
+                    .update({
+                        name: skillName,
                         type: type,
                         milestones: milestones ? JSON.stringify(milestones.map(m => ({ name: m, completed: false }))) : null,
                         target: target,
                         target_unit: targetUnit
-                    }
-                ])
-                .select();
+                    })
+                    .eq('id', this.editingSkillId);
 
-            if (error) throw error;
+                if (error) throw error;
 
-            this.skills.push(data[0]);
+                // Mettre à jour localement
+                const skillIndex = this.skills.findIndex(s => s.id === this.editingSkillId);
+                if (skillIndex !== -1) {
+                    this.skills[skillIndex] = {
+                        ...this.skills[skillIndex],
+                        name: skillName,
+                        type: type,
+                        milestones: milestones ? JSON.stringify(milestones.map(m => ({ name: m, completed: false }))) : null,
+                        target: target,
+                        target_unit: targetUnit
+                    };
+                }
+            } else {
+                // Mode création
+                const { data, error } = await supabase
+                    .from('skills')
+                    .insert([
+                        { 
+                            name: skillName, 
+                            hours: 0, 
+                            user_id: this.user.id,
+                            type: type,
+                            milestones: milestones ? JSON.stringify(milestones.map(m => ({ name: m, completed: false }))) : null,
+                            target: target,
+                            target_unit: targetUnit
+                        }
+                    ])
+                    .select();
+
+                if (error) throw error;
+
+                this.skills.push(data[0]);
+            }
+
             this.renderSkills();
             this.closeAddGoalModal();
         } catch (error) {
-            alert('Erreur lors de l\'ajout: ' + error.message);
+            alert('Erreur lors de l\'opération: ' + error.message);
         }
     }
 
@@ -303,6 +370,11 @@ class SkillsTracker {
     closeAddGoalModal() {
         this.addGoalModal.style.display = 'none';
         this.resetForm();
+        
+        // Reset du mode édition
+        this.editingSkillId = null;
+        document.getElementById('addSkillBtn').textContent = 'Créer';
+        document.querySelector('#addGoalModal .modal-header h2').textContent = 'Nouvel objectif';
     }
 
     async incrementSkill(skillId) {
@@ -396,6 +468,11 @@ class SkillsTracker {
             .sort((a, b) => b.hours - a.hours)
             .map(skill => this.renderSkillItem(skill))
             .join('');
+            
+        // Forcer le recalcul des batteries après un délai pour s'assurer que le DOM est prêt
+        setTimeout(() => {
+            this.recalculateAllBatteries();
+        }, 150);
     }
 
     renderSkillItem(skill) {
@@ -410,14 +487,25 @@ class SkillsTracker {
         
         if (skill.type === 'target') {
             const progress = Math.min((skill.hours / skill.target) * 100, 100);
-            progressInfo = `<div class="skill-progress">${skill.hours}/${skill.target} ${skill.target_unit} (${Math.round(progress)}%)</div>`;
+            progressInfo = `
+                <div class="skill-progress">${skill.hours}/${skill.target} ${skill.target_unit}</div>
+                <div class="battery-indicator">
+                    ${this.renderBatteryBars(skill.hours, skill.target, skill.id)}
+                    <span class="battery-percentage">${Math.round(progress)}%</span>
+                </div>
+            `;
         } else if (skill.type === 'project' && skill.milestones) {
             const milestones = JSON.parse(skill.milestones);
             const completedCount = milestones.filter(m => m.completed).length;
             const totalCount = milestones.length;
+            const progressPercent = Math.round((completedCount/totalCount)*100);
             
             milestonesInfo = `
-                <div class="skill-progress">${completedCount}/${totalCount} milestones (${Math.round((completedCount/totalCount)*100)}%)</div>
+                <div class="skill-progress">${completedCount}/${totalCount} milestones</div>
+                <div class="battery-indicator">
+                    ${this.renderBatteryBars(completedCount, totalCount, `project-${skill.id}`)}
+                    <span class="battery-percentage">${progressPercent}%</span>
+                </div>
                 <div class="milestones-list">
                     ${milestones.map((milestone, index) => `
                         <div class="milestone-item">
@@ -436,7 +524,7 @@ class SkillsTracker {
                             JSON.parse(skill.milestones).every(m => m.completed));
 
         return `
-            <div class="skill-item ${isCompleted ? 'completed' : ''}">
+            <div class="skill-item ${isCompleted ? 'completed' : ''}" data-type="${skill.type}">
                 <div class="skill-info">
                     <div class="skill-type-badge">${typeLabels[skill.type] || 'Habitude'}</div>
                     <div class="skill-name">${skill.name}</div>
@@ -447,14 +535,24 @@ class SkillsTracker {
                 <div class="skill-controls">
                     ${!isCompleted ? `
                         <button class="increment-btn" onclick="skillsTracker.incrementSkill(${skill.id})">
-                            +1
+                            +
                         </button>
                     ` : `
                         <div class="completed-badge">Terminé</div>
                     `}
-                    <button class="delete-btn" onclick="skillsTracker.deleteSkill(${skill.id})">
-                        ×
-                    </button>
+                    <div class="menu-container">
+                        <button class="menu-btn" onclick="skillsTracker.toggleMenu(${skill.id})">
+                            ⋯
+                        </button>
+                        <div class="menu-dropdown" id="menu-${skill.id}" style="display: none;">
+                            <button class="menu-item" onclick="skillsTracker.editSkill(${skill.id})">
+                                Modifier
+                            </button>
+                            <button class="menu-item delete" onclick="skillsTracker.deleteSkill(${skill.id})">
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -480,6 +578,177 @@ class SkillsTracker {
                 alert('Erreur lors de la mise à jour: ' + error.message);
             }
         }
+    }
+
+    toggleMenu(skillId) {
+        // Fermer tous les autres menus
+        document.querySelectorAll('.menu-dropdown').forEach(menu => {
+            if (menu.id !== `menu-${skillId}`) {
+                menu.style.display = 'none';
+            }
+        });
+
+        // Toggle le menu actuel
+        const menu = document.getElementById(`menu-${skillId}`);
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+
+    editSkill(skillId) {
+        const skill = this.skills.find(s => s.id === skillId);
+        if (skill) {
+            // Fermer le menu
+            document.getElementById(`menu-${skillId}`).style.display = 'none';
+            
+            // Pré-remplir le formulaire avec les données existantes
+            this.skillInput.value = skill.name;
+            this.skillType.value = skill.type;
+            
+            if (skill.type === 'target') {
+                this.target.value = skill.target;
+                this.targetUnit.value = skill.target_unit;
+            } else if (skill.type === 'project' && skill.milestones) {
+                const milestones = JSON.parse(skill.milestones);
+                this.milestonesContainer.innerHTML = '';
+                milestones.forEach(milestone => {
+                    const milestoneDiv = document.createElement('div');
+                    milestoneDiv.className = 'milestone-input';
+                    milestoneDiv.innerHTML = `
+                        <input type="text" class="milestone-name" value="${milestone.name}" maxlength="100">
+                        <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
+                    `;
+                    this.milestonesContainer.appendChild(milestoneDiv);
+                });
+            }
+            
+            this.handleSkillTypeChange();
+            
+            // Changer le mode en édition
+            this.editingSkillId = skillId;
+            document.getElementById('addSkillBtn').textContent = 'Modifier';
+            document.querySelector('#addGoalModal .modal-header h2').textContent = 'Modifier l\'objectif';
+            
+            this.openAddGoalModal();
+        }
+    }
+
+    renderBatteryBars(filledBars, totalBars, skillId) {
+        // Créer un ID unique pour cette batterie
+        const batteryId = `battery-${skillId || Date.now()}`;
+        
+        let batteryHTML = `<div class="battery-bars" id="${batteryId}" data-filled="${filledBars}" data-total="${totalBars}">`;
+        // Placeholder - sera rempli par calculateOptimalBars après le rendu
+        batteryHTML += '</div>';
+        
+        // Programmer le calcul après que l'élément soit dans le DOM
+        setTimeout(() => {
+            this.calculateOptimalBars(batteryId, filledBars, totalBars);
+            
+            // Observer cet élément pour les changements de taille
+            if (this.resizeObserver) {
+                const element = document.getElementById(batteryId);
+                if (element) {
+                    this.resizeObserver.observe(element.closest('.skill-item'));
+                }
+            }
+        }, 100);
+        
+        return batteryHTML;
+    }
+
+    calculateOptimalBars(batteryId, filledBars, totalBars) {
+        const batteryContainer = document.getElementById(batteryId);
+        if (!batteryContainer) return;
+        
+        // S'assurer que le parent a une largeur définie
+        const parentElement = batteryContainer.closest('.battery-indicator');
+        if (!parentElement) return;
+        
+        // Calculer la largeur disponible en tenant compte du pourcentage et du gap
+        const parentWidth = parentElement.offsetWidth;
+        const percentageElement = parentElement.querySelector('.battery-percentage');
+        const percentageWidth = percentageElement ? percentageElement.offsetWidth + 8 : 40; // 8px pour le gap
+        const containerWidth = parentWidth - percentageWidth;
+        
+        if (containerWidth <= 0) {
+            // Réessayer après un court délai si la largeur n'est pas encore calculée
+            setTimeout(() => this.calculateOptimalBars(batteryId, filledBars, totalBars), 100);
+            return;
+        }
+        
+        // Déterminer le nombre optimal de barres selon la largeur
+        const minBarWidth = 2; // largeur minimale d'une barre
+        const gap = 1; // espace entre les barres
+        let displayBars, displayFilled, groupSize = 1;
+        
+        // Calculer combien de barres peuvent tenir avec une largeur minimale
+        const maxPossibleBars = Math.max(1, Math.floor(containerWidth / (minBarWidth + gap)));
+        
+        if (totalBars <= maxPossibleBars) {
+            // Afficher toutes les barres si elles peuvent tenir
+            displayBars = totalBars;
+            displayFilled = filledBars;
+        } else {
+            // Grouper les unités pour s'adapter à la largeur
+            displayBars = maxPossibleBars;
+            groupSize = Math.ceil(totalBars / maxPossibleBars);
+            displayFilled = Math.ceil(filledBars / groupSize);
+        }
+        
+        // Calculer la largeur exacte de chaque barre pour utiliser tout l'espace
+        const totalGapWidth = Math.max(0, (displayBars - 1) * gap);
+        const availableBarWidth = containerWidth - totalGapWidth;
+        const barWidth = Math.max(minBarWidth, Math.floor(availableBarWidth / displayBars));
+        
+        // Définir les variables CSS pour la largeur dynamique
+        batteryContainer.style.setProperty('--bar-width', `${barWidth}px`);
+        batteryContainer.style.setProperty('--bar-gap', `${gap}px`);
+        batteryContainer.style.setProperty('--container-width', `${containerWidth}px`);
+        
+        // Générer les barres sans largeur inline
+        let barsHTML = '';
+        for (let i = 1; i <= displayBars; i++) {
+            const isActive = i <= displayFilled;
+            barsHTML += `<div class="battery-bar ${isActive ? 'active' : ''}" 
+                              title="${this.getBatteryTooltip(i, groupSize, totalBars, filledBars)}"></div>`;
+        }
+        
+        batteryContainer.innerHTML = barsHTML;
+        
+        // Ajouter une classe CSS selon la densité pour ajuster la hauteur
+        if (barWidth < 4) {
+            batteryContainer.classList.add('very-dense');
+        } else if (barWidth < 6) {
+            batteryContainer.classList.add('dense');
+        }
+    }
+
+    getBatteryTooltip(barIndex, groupSize, totalBars, filledBars) {
+        if (groupSize === 1) {
+            return `${barIndex}/${totalBars}`;
+        } else {
+            const rangeStart = (barIndex - 1) * groupSize + 1;
+            const rangeEnd = Math.min(barIndex * groupSize, totalBars);
+            return `${rangeStart}-${rangeEnd}/${totalBars} (${filledBars} complétés)`;
+        }
+    }
+
+    recalculateAllBatteries() {
+        // Attendre que le layout soit stabilisé
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => { // Double RAF pour s'assurer que le layout est fini
+                document.querySelectorAll('.battery-bars[data-filled]').forEach(battery => {
+                    const filledBars = parseInt(battery.dataset.filled);
+                    const totalBars = parseInt(battery.dataset.total);
+                    // Reset des classes pour recalcul propre
+                    battery.classList.remove('dense', 'very-dense');
+                    // Reset des variables CSS
+                    battery.style.removeProperty('--bar-width');
+                    battery.style.removeProperty('--bar-gap');
+                    battery.style.removeProperty('--container-width');
+                    this.calculateOptimalBars(battery.id, filledBars, totalBars);
+                });
+            });
+        });
     }
 }
 
