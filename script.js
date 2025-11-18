@@ -682,16 +682,16 @@ class SkillsTracker {
                     ${progressInfo}
                     ${milestonesInfo}
                 </div>
-                <div class="skill-controls">
+                <div class="skill-controls" draggable="false">
                     ${!isCompleted ? `
-                        <button class="increment-btn" onclick="skillsTracker.incrementSkill(${skill.id})">
+                        <button class="increment-btn" draggable="false" onclick="skillsTracker.incrementSkill(${skill.id})">
                             +
                         </button>
                     ` : `
                         <div class="completed-badge">Terminé</div>
                     `}
                     <div class="menu-container">
-                        <button class="menu-btn" onclick="skillsTracker.toggleMenu(${skill.id})">
+                        <button class="menu-btn" draggable="false" onclick="skillsTracker.toggleMenu(${skill.id})">
                             ⋯
                         </button>
                         <div class="menu-dropdown" id="menu-${skill.id}" style="display: none;">
@@ -808,12 +808,22 @@ class SkillsTracker {
     initializeDragAndDrop() {
         const skillItems = document.querySelectorAll('.skill-item');
         
+        // Nettoyer les anciens event listeners
+        this.skillsContainer.removeEventListener('dragover', this.boundDragOver);
+        this.skillsContainer.removeEventListener('drop', this.boundDrop);
+        
+        // Créer les bound functions pour pouvoir les supprimer plus tard
+        this.boundDragOver = (e) => this.handleDragOver(e);
+        this.boundDrop = (e) => this.handleDrop(e);
+        
+        // Ajouter les event listeners au conteneur
+        this.skillsContainer.addEventListener('dragover', this.boundDragOver);
+        this.skillsContainer.addEventListener('drop', this.boundDrop);
+        
         skillItems.forEach(item => {
-            // Desktop drag and drop
+            // Desktop drag and drop - seulement dragstart et dragend sur les items
             item.addEventListener('dragstart', (e) => this.handleDragStart(e));
             item.addEventListener('dragend', (e) => this.handleDragEnd(e));
-            item.addEventListener('dragover', (e) => this.handleDragOver(e));
-            item.addEventListener('drop', (e) => this.handleDrop(e));
             
             // Mobile touch events
             let longPressTimer;
@@ -821,6 +831,9 @@ class SkillsTracker {
             let startY = 0;
             
             item.addEventListener('touchstart', (e) => {
+                // Ne pas déclencher sur les boutons
+                if (e.target.closest('button')) return;
+                
                 startY = e.touches[0].clientY;
                 longPressTimer = setTimeout(() => {
                     if (!isDragging) {
@@ -872,38 +885,55 @@ class SkillsTracker {
     }
 
     handleDragStart(e) {
-        this.draggedElement = e.target;
-        e.target.classList.add('dragging');
+        // S'assurer qu'on drag bien un skill-item
+        const skillItem = e.target.closest('.skill-item');
+        if (!skillItem) return;
+        
+        this.draggedElement = skillItem;
+        skillItem.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', e.target.outerHTML);
+        e.dataTransfer.setData('text/plain', skillItem.dataset.skillId);
+        
+        console.log('Drag started for skill:', skillItem.dataset.skillId);
     }
 
     handleDragEnd(e) {
-        e.target.classList.remove('dragging');
+        const skillItem = e.target.closest('.skill-item');
+        if (skillItem) {
+            skillItem.classList.remove('dragging');
+        }
         this.draggedElement = null;
         
-        // Nettoyer les placeholders
-        document.querySelectorAll('.drag-placeholder').forEach(p => p.remove());
+        // Nettoyer les indicateurs visuels
         document.querySelectorAll('.drag-over').forEach(item => item.classList.remove('drag-over'));
+        
+        console.log('Drag ended');
     }
 
     handleDragOver(e) {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         
-        const afterElement = this.getDragAfterElement(this.skillsContainer, e.clientY);
-        const draggedElement = this.draggedElement;
+        if (!this.draggedElement) return;
         
+        // Trouver l'élément le plus proche
+        const afterElement = this.getDragAfterElement(this.skillsContainer, e.clientY);
+        
+        // Réorganiser visuellement
         if (afterElement == null) {
-            this.skillsContainer.appendChild(draggedElement);
+            this.skillsContainer.appendChild(this.draggedElement);
         } else {
-            this.skillsContainer.insertBefore(draggedElement, afterElement);
+            this.skillsContainer.insertBefore(this.draggedElement, afterElement);
         }
     }
 
     handleDrop(e) {
         e.preventDefault();
-        this.updateSkillsOrder();
+        console.log('Drop event triggered');
+        
+        if (this.draggedElement) {
+            this.updateSkillsOrder();
+        }
     }
 
     handleMobileReorder(draggedItem, targetItem, currentY) {
