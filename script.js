@@ -673,7 +673,11 @@ class SkillsTracker {
         const parentWidth = parentElement.offsetWidth;
         const percentageElement = parentElement.querySelector('.battery-percentage');
         const percentageWidth = percentageElement ? percentageElement.offsetWidth + 8 : 40; // 8px pour le gap
-        const containerWidth = parentWidth - percentageWidth;
+        
+        // Ajouter une marge de sécurité sur mobile
+        const screenWidth = window.innerWidth;
+        const safetyMargin = screenWidth <= 768 ? 10 : 5; // Plus de marge sur mobile
+        const containerWidth = Math.max(20, parentWidth - percentageWidth - safetyMargin);
         
         if (containerWidth <= 0) {
             // Réessayer après un court délai si la largeur n'est pas encore calculée
@@ -689,14 +693,25 @@ class SkillsTracker {
         // Calculer combien de barres peuvent tenir avec une largeur minimale
         const maxPossibleBars = Math.max(1, Math.floor(containerWidth / (minBarWidth + gap)));
         
-        if (totalBars <= maxPossibleBars) {
+        // Limiter le nombre de barres selon la taille d'écran
+        const screenWidth = window.innerWidth;
+        let maxBarsLimit;
+        if (screenWidth <= 480) {
+            maxBarsLimit = Math.min(maxPossibleBars, 20); // Max 20 barres sur très petit écran
+        } else if (screenWidth <= 768) {
+            maxBarsLimit = Math.min(maxPossibleBars, 30); // Max 30 barres sur mobile
+        } else {
+            maxBarsLimit = maxPossibleBars; // Pas de limite sur desktop
+        }
+        
+        if (totalBars <= maxBarsLimit) {
             // Afficher toutes les barres si elles peuvent tenir
             displayBars = totalBars;
             displayFilled = filledBars;
         } else {
             // Grouper les unités pour s'adapter à la largeur
-            displayBars = maxPossibleBars;
-            groupSize = Math.ceil(totalBars / maxPossibleBars);
+            displayBars = maxBarsLimit;
+            groupSize = Math.ceil(totalBars / maxBarsLimit);
             displayFilled = Math.ceil(filledBars / groupSize);
         }
         

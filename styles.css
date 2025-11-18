@@ -276,6 +276,8 @@ h1 {
     height: 12px; /* Hauteur fixe pour stabilité */
     gap: var(--bar-gap, 1px);
     width: var(--container-width, auto);
+    max-width: 100%; /* Empêche le débordement */
+    overflow: hidden; /* Cache les barres qui dépassent */
 }
 
 /* Styles de base pour les barres (largeur définie par CSS variable) */
