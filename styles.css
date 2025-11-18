@@ -1062,8 +1062,9 @@ h1 {
     
     .skill-controls {
         position: absolute;
-        top: 16px;
+        top: 50%;
         right: 16px;
+        transform: translateY(-50%);
         width: auto;
         flex-direction: row;
         gap: 8px;
