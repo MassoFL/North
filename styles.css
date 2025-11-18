@@ -1057,12 +1057,21 @@ h1 {
         flex-direction: column;
         gap: 16px;
         padding: 16px;
+        position: relative;
     }
     
     .skill-controls {
-        align-self: flex-end;
-        width: 100%;
-        justify-content: space-between;
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: auto;
+        flex-direction: row;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .skill-info {
+        padding-right: 80px; /* Espace pour les contrôles */
     }
     
     .modal-content {
@@ -1203,24 +1212,25 @@ h1 {
     }
     
     .increment-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 18px;
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
     }
     
     .archive-btn {
-        padding: 10px 16px;
-        font-size: 11px;
+        padding: 6px 10px;
+        font-size: 10px;
     }
     
     .menu-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 18px;
+        width: 28px;
+        height: 28px;
+        font-size: 16px;
     }
     
     .menu-dropdown {
-        right: -10px;
+        right: 0;
+        top: 100%;
     }
     
     .modal-content {
