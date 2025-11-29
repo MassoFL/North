@@ -10,6 +10,9 @@
     <title>LokedIn</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@excalidraw/excalidraw@0.17.0/dist/excalidraw.production.min.js"></script>
 </head>
 
 <body>
@@ -128,6 +131,20 @@
                     <!-- Archived skills will be populated here -->
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Whiteboard Modal -->
+    <div id="whiteboardModal" class="modal whiteboard-modal" style="display: none;">
+        <div class="whiteboard-container">
+            <div class="whiteboard-header">
+                <h2 id="whiteboardTitle">Tableau blanc</h2>
+                <div class="whiteboard-actions">
+                    <button class="save-whiteboard-btn" onclick="skillsTracker.saveWhiteboard()">💾 Sauvegarder</button>
+                    <button class="close-btn" onclick="skillsTracker.closeWhiteboard()">×</button>
+                </div>
+            </div>
+            <div id="excalidrawContainer" class="excalidraw-wrapper"></div>
         </div>
     </div>
 

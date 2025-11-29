@@ -37,6 +37,8 @@ class SkillsTracker {
         this.user = null;
         this.currentOnboardingStep = 1;
         this.editingSkillId = null;
+        this.excalidrawAPI = null;
+        this.currentWhiteboardSkillId = null;
         this.initializeElements();
         this.bindEvents();
         this.checkAuth();
@@ -66,6 +68,9 @@ class SkillsTracker {
         this.addMilestoneBtn = document.getElementById('addMilestoneBtn');
         this.target = document.getElementById('target');
         this.targetUnit = document.getElementById('targetUnit');
+        this.whiteboardModal = document.getElementById('whiteboardModal');
+        this.whiteboardTitle = document.getElementById('whiteboardTitle');
+        this.excalidrawContainer = document.getElementById('excalidrawContainer');
         
         // Vérifier que les éléments critiques existent
         if (!this.authForm) {
@@ -728,6 +733,12 @@ class SkillsTracker {
                     ${milestonesInfo}
                 </div>
                 <div class="skill-controls" draggable="false">
+                    <button class="whiteboard-btn ${skill.whiteboard_data ? 'has-content' : ''}" 
+                            draggable="false" 
+                            onclick="skillsTracker.openWhiteboard(${skill.id})"
+                            title="Tableau blanc">
+                        📋
+                    </button>
                     ${!isCompleted ? `
                         <button class="increment-btn" draggable="false" onclick="skillsTracker.incrementSkill(${skill.id})">
                             +
@@ -1340,6 +1351,128 @@ class SkillsTracker {
     toggleUserMenu() {
         const isVisible = this.userMenu.style.display === 'block';
         this.userMenu.style.display = isVisible ? 'none' : 'block';
+    }
+
+    async openWhiteboard(skillId) {
+        const skill = this.skills.find(s => s.id === skillId);
+        if (!skill) return;
+
+        this.currentWhiteboardSkillId = skillId;
+        this.whiteboardTitle.textContent = `Tableau blanc - ${skill.name}`;
+        this.whiteboardModal.style.display = 'flex';
+
+        // Attendre que le modal soit visible
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Initialiser Excalidraw
+        this.initializeExcalidraw(skill.whiteboard_data);
+    }
+
+    initializeExcalidraw(savedData) {
+        // Nettoyer le conteneur
+        this.excalidrawContainer.innerHTML = '';
+
+        const excalidrawElement = document.createElement('div');
+        excalidrawElement.style.height = '100%';
+        excalidrawElement.style.width = '100%';
+        this.excalidrawContainer.appendChild(excalidrawElement);
+
+        // Initialiser Excalidraw avec React
+        const { Excalidraw } = window.ExcalidrawLib;
+        
+        const initialData = savedData ? {
+            elements: savedData.elements || [],
+            appState: savedData.appState || {},
+            files: savedData.files || {}
+        } : {};
+
+        const excalidrawComponent = React.createElement(Excalidraw, {
+            initialData: initialData,
+            onChange: (elements, appState, files) => {
+                // Auto-save pourrait être ajouté ici
+            },
+            ref: (api) => {
+                this.excalidrawAPI = api;
+            },
+            UIOptions: {
+                canvasActions: {
+                    loadScene: false,
+                    export: false,
+                    saveAsImage: true
+                }
+            }
+        });
+
+        ReactDOM.render(excalidrawComponent, excalidrawElement);
+    }
+
+    async saveWhiteboard() {
+        if (!this.excalidrawAPI || !this.currentWhiteboardSkillId) return;
+
+        const saveBtn = document.querySelector('.save-whiteboard-btn');
+        saveBtn.classList.add('saving');
+        saveBtn.textContent = '💾 Sauvegarde...';
+
+        try {
+            const elements = this.excalidrawAPI.getSceneElements();
+            const appState = this.excalidrawAPI.getAppState();
+            const files = this.excalidrawAPI.getFiles();
+
+            const whiteboardData = {
+                elements: elements,
+                appState: {
+                    viewBackgroundColor: appState.viewBackgroundColor,
+                    currentItemStrokeColor: appState.currentItemStrokeColor,
+                    currentItemBackgroundColor: appState.currentItemBackgroundColor,
+                    currentItemFillStyle: appState.currentItemFillStyle,
+                    currentItemStrokeWidth: appState.currentItemStrokeWidth,
+                    currentItemRoughness: appState.currentItemRoughness,
+                    currentItemOpacity: appState.currentItemOpacity,
+                    gridSize: appState.gridSize,
+                    colorPalette: appState.colorPalette
+                },
+                files: files
+            };
+
+            const { error } = await supabase
+                .from('skills')
+                .update({ whiteboard_data: whiteboardData })
+                .eq('id', this.currentWhiteboardSkillId);
+
+            if (error) throw error;
+
+            // Mettre à jour localement
+            const skill = this.skills.find(s => s.id === this.currentWhiteboardSkillId);
+            if (skill) {
+                skill.whiteboard_data = whiteboardData;
+            }
+
+            saveBtn.textContent = '✓ Sauvegardé';
+            setTimeout(() => {
+                saveBtn.classList.remove('saving');
+                saveBtn.textContent = '💾 Sauvegarder';
+            }, 2000);
+
+            // Rafraîchir l'affichage pour mettre à jour l'indicateur
+            this.renderSkills();
+        } catch (error) {
+            console.error('Erreur lors de la sauvegarde:', error);
+            alert('Erreur lors de la sauvegarde du tableau blanc: ' + error.message);
+            saveBtn.classList.remove('saving');
+            saveBtn.textContent = '💾 Sauvegarder';
+        }
+    }
+
+    closeWhiteboard() {
+        this.whiteboardModal.style.display = 'none';
+        this.currentWhiteboardSkillId = null;
+        this.excalidrawAPI = null;
+        
+        // Nettoyer le conteneur React
+        if (this.excalidrawContainer.firstChild) {
+            ReactDOM.unmountComponentAtNode(this.excalidrawContainer.firstChild);
+        }
+        this.excalidrawContainer.innerHTML = '';
     }
 }
 
