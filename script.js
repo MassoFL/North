@@ -71,6 +71,7 @@ class SkillsTracker {
         this.whiteboardModal = document.getElementById('whiteboardModal');
         this.whiteboardTitle = document.getElementById('whiteboardTitle');
         this.excalidrawContainer = document.getElementById('excalidrawContainer');
+        this.saveWhiteboardBtn = document.querySelector('.save-whiteboard-btn');
         
         // Vérifier que les éléments critiques existent
         if (!this.authForm) {
@@ -132,6 +133,14 @@ class SkillsTracker {
         this.userMenu = document.getElementById('userMenu');
         this.menuToggle.addEventListener('click', () => this.toggleUserMenu());
         
+        // Whiteboard save button
+        if (this.saveWhiteboardBtn) {
+            this.saveWhiteboardBtn.addEventListener('click', () => {
+                console.log('Save button clicked via event listener!');
+                this.saveWhiteboard();
+            });
+        }
+
         // Fermer les menus quand on clique ailleurs
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.menu-container')) {
@@ -377,8 +386,9 @@ class SkillsTracker {
     addMilestoneInput() {
         const milestoneDiv = document.createElement('div');
         milestoneDiv.className = 'milestone-input';
+        const uniqueId = `milestone-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         milestoneDiv.innerHTML = `
-            <input type="text" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
+            <input type="text" id="${uniqueId}" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
             <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
         `;
         this.milestonesContainer.appendChild(milestoneDiv);
@@ -511,9 +521,10 @@ class SkillsTracker {
         this.skillType.value = 'continuous';
         
         // Reset milestones
+        const initialMilestoneId = `milestone-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         this.milestonesContainer.innerHTML = `
             <div class="milestone-input">
-                <input type="text" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
+                <input type="text" id="${initialMilestoneId}" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
                 <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
             </div>
         `;
@@ -578,6 +589,10 @@ class SkillsTracker {
     async loadSkillsFromDB() {
         try {
             console.log('Chargement des skills pour user:', this.user.id);
+            
+            // Vérifier d'abord si la colonne whiteboard_data existe
+            await this.checkWhiteboardColumn();
+            
             const { data, error } = await supabase
                 .from('skills')
                 .select('*')
@@ -590,12 +605,52 @@ class SkillsTracker {
             }
 
             console.log('Skills chargées:', data);
+            
+            // Debug whiteboard data loading
+            if (data && data.length > 0) {
+                const skillsWithWhiteboards = data.filter(skill => skill.whiteboard_data);
+                console.log(`📋 Skills with whiteboard data: ${skillsWithWhiteboards.length}/${data.length}`);
+                
+                skillsWithWhiteboards.forEach(skill => {
+                    console.log(`Skill "${skill.name}" has whiteboard data:`, {
+                        elementsCount: skill.whiteboard_data?.elements?.length || 0,
+                        hasAppState: !!skill.whiteboard_data?.appState,
+                        filesCount: Object.keys(skill.whiteboard_data?.files || {}).length
+                    });
+                });
+            }
+            
             this.skills = data || [];
             this.renderSkills();
         } catch (error) {
             console.error('Erreur lors du chargement des skills:', error);
             this.skills = [];
             // Ne pas bloquer la connexion si les skills ne se chargent pas
+        }
+    }
+
+    async checkWhiteboardColumn() {
+        try {
+            const { data, error } = await supabase
+                .from('information_schema.columns')
+                .select('column_name')
+                .eq('table_name', 'skills')
+                .eq('column_name', 'whiteboard_data');
+
+            if (error) {
+                console.warn('Could not check whiteboard column:', error);
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                console.error('CRITICAL: whiteboard_data column does not exist!');
+                console.error('Please run the migration: ALTER TABLE skills ADD COLUMN whiteboard_data JSONB;');
+                alert('Erreur: La colonne whiteboard_data n\'existe pas dans la base de données. Veuillez exécuter la migration SQL.');
+            } else {
+                console.log('✅ whiteboard_data column exists');
+            }
+        } catch (error) {
+            console.warn('Could not verify whiteboard column:', error);
         }
     }
 
@@ -823,8 +878,9 @@ class SkillsTracker {
                 milestones.forEach(milestone => {
                     const milestoneDiv = document.createElement('div');
                     milestoneDiv.className = 'milestone-input';
+                    const uniqueId = `milestone-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                     milestoneDiv.innerHTML = `
-                        <input type="text" class="milestone-name" value="${milestone.name}" maxlength="100">
+                        <input type="text" id="${uniqueId}" class="milestone-name" value="${milestone.name}" maxlength="100">
                         <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
                     `;
                     this.milestonesContainer.appendChild(milestoneDiv);
@@ -843,8 +899,8 @@ class SkillsTracker {
     }
 
     renderBatteryBars(filledBars, totalBars, skillId) {
-        // Créer un ID unique pour cette batterie
-        const batteryId = `battery-${skillId || Date.now()}`;
+        // Créer un ID unique pour cette batterie avec timestamp pour éviter les conflits
+        const batteryId = `battery-${skillId || 'temp'}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
         
         let batteryHTML = `<div class="battery-bars" id="${batteryId}" data-filled="${filledBars}" data-total="${totalBars}">`;
         // Placeholder - sera rempli par calculateOptimalBars après le rendu
@@ -1357,15 +1413,42 @@ class SkillsTracker {
         const skill = this.skills.find(s => s.id === skillId);
         if (!skill) return;
 
+        console.log('Opening whiteboard for skill:', skill.name);
+        console.log('Saved whiteboard data:', skill.whiteboard_data);
+
         this.currentWhiteboardSkillId = skillId;
         this.whiteboardTitle.textContent = `Tableau blanc - ${skill.name}`;
         this.whiteboardModal.style.display = 'flex';
 
+
+
         // Attendre que le modal soit visible
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // Vérifier si Excalidraw est disponible, sinon essayer de le recharger
+        if (!window.ExcalidrawLib && !window.Excalidraw) {
+            await this.attemptExcalidrawReload();
+        }
+
         // Initialiser Excalidraw
         this.initializeExcalidraw(skill.whiteboard_data);
+    }
+
+    async attemptExcalidrawReload() {
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@excalidraw/excalidraw@0.15.0/dist/excalidraw.production.min.js';
+            script.onload = () => {
+                console.log('✅ Excalidraw reloaded successfully');
+                resolve();
+            };
+            script.onerror = () => {
+                console.error('❌ Failed to reload Excalidraw');
+                alert('Impossible de charger Excalidraw. Veuillez recharger la page.');
+                resolve();
+            };
+            document.head.appendChild(script);
+        });
     }
 
     initializeExcalidraw(savedData) {
@@ -1377,50 +1460,157 @@ class SkillsTracker {
         excalidrawElement.style.width = '100%';
         this.excalidrawContainer.appendChild(excalidrawElement);
 
-        // Initialiser Excalidraw avec React
-        const { Excalidraw } = window.ExcalidrawLib;
+        // Vérifications des dépendances
+        if (!window.React) {
+            alert('Erreur: React n\'est pas chargé. Rechargez la page.');
+            return;
+        }
+
+        if (!window.ReactDOM) {
+            alert('Erreur: ReactDOM n\'est pas chargé. Rechargez la page.');
+            return;
+        }
+
+        // Try different ways to access Excalidraw
+        let Excalidraw = null;
+        
+        if (window.ExcalidrawLib && window.ExcalidrawLib.Excalidraw) {
+            console.log('✅ Found Excalidraw in ExcalidrawLib');
+            Excalidraw = window.ExcalidrawLib.Excalidraw;
+            console.log('ExcalidrawLib contents:', Object.keys(window.ExcalidrawLib));
+        } else if (window.Excalidraw) {
+            console.log('✅ Found Excalidraw as global');
+            Excalidraw = window.Excalidraw;
+        } else if (window.ExcalidrawLib) {
+            console.log('ExcalidrawLib available but no Excalidraw component');
+            console.log('ExcalidrawLib contents:', Object.keys(window.ExcalidrawLib));
+            
+            // Try to find Excalidraw in any property
+            for (const key of Object.keys(window.ExcalidrawLib)) {
+                if (typeof window.ExcalidrawLib[key] === 'function' || 
+                    (typeof window.ExcalidrawLib[key] === 'object' && window.ExcalidrawLib[key].$$typeof)) {
+                    console.log('Trying Excalidraw from key:', key);
+                    Excalidraw = window.ExcalidrawLib[key];
+                    break;
+                }
+            }
+        }
+        
+        if (!Excalidraw) {
+            alert('Erreur: Le composant Excalidraw n\'est pas disponible. Rechargez la page.');
+            return;
+        }
         
         const initialData = savedData ? {
             elements: savedData.elements || [],
             appState: savedData.appState || {},
             files: savedData.files || {}
-        } : {};
+        } : {
+            elements: [],
+            appState: {},
+            files: {}
+        };
 
-        const excalidrawComponent = React.createElement(Excalidraw, {
-            initialData: initialData,
-            onChange: (elements, appState, files) => {
-                // Auto-save pourrait être ajouté ici
-            },
-            ref: (api) => {
-                this.excalidrawAPI = api;
-            },
-            UIOptions: {
-                canvasActions: {
-                    loadScene: false,
-                    export: false,
-                    saveAsImage: true
+
+
+        try {
+            
+            // Try different API callback approaches for different Excalidraw versions
+            const excalidrawProps = {
+                initialData: initialData,
+                onChange: (elements, appState, files) => {
+                    console.log('📝 Excalidraw onChange - Elements:', elements?.length || 0);
                 }
-            }
-        });
+            };
 
-        ReactDOM.render(excalidrawComponent, excalidrawElement);
+            // Multiple API detection methods for compatibility
+            excalidrawProps.excalidrawAPI = (api) => {
+                this.handleExcalidrawAPI(api);
+            };
+
+            excalidrawProps.ref = (api) => {
+                this.handleExcalidrawAPI(api);
+            };
+
+            excalidrawProps.onPointerUpdate = (payload) => {
+                if (payload && payload.excalidrawAPI && !this.excalidrawAPI) {
+                    this.handleExcalidrawAPI(payload.excalidrawAPI);
+                }
+            };
+
+            const excalidrawComponent = React.createElement(Excalidraw, excalidrawProps);
+
+            ReactDOM.render(excalidrawComponent, excalidrawElement);
+            
+            // Fallback: Try to find API after render
+            setTimeout(() => {
+                this.tryFindExcalidrawAPI();
+            }, 2000);
+            
+        } catch (error) {
+            console.error('❌ Error rendering Excalidraw:', error);
+            alert('Erreur lors de l\'initialisation d\'Excalidraw: ' + error.message);
+        }
     }
 
     async saveWhiteboard() {
-        if (!this.excalidrawAPI || !this.currentWhiteboardSkillId) return;
+        console.log('saveWhiteboard function called!');
+        console.log('excalidrawAPI:', this.excalidrawAPI);
+        console.log('currentWhiteboardSkillId:', this.currentWhiteboardSkillId);
+        
+        if (!this.excalidrawAPI) {
+            console.error('ExcalidrawAPI is not available');
+            alert('Erreur: L\'API Excalidraw n\'est pas disponible. Essayez de fermer et rouvrir le tableau blanc.');
+            return;
+        }
+
+        if (!this.currentWhiteboardSkillId) {
+            console.error('No current whiteboard skill ID');
+            alert('Erreur: Aucun tableau blanc sélectionné.');
+            return;
+        }
 
         const saveBtn = document.querySelector('.save-whiteboard-btn');
+        if (!saveBtn) {
+            console.error('Save button not found');
+            return;
+        }
+
         saveBtn.classList.add('saving');
         saveBtn.textContent = '💾 Sauvegarde...';
 
         try {
+            // Vérifier que les méthodes API existent
+            if (typeof this.excalidrawAPI.getSceneElements !== 'function') {
+                throw new Error('getSceneElements method not available on API');
+            }
+            if (typeof this.excalidrawAPI.getAppState !== 'function') {
+                throw new Error('getAppState method not available on API');
+            }
+            if (typeof this.excalidrawAPI.getFiles !== 'function') {
+                throw new Error('getFiles method not available on API');
+            }
+
             const elements = this.excalidrawAPI.getSceneElements();
             const appState = this.excalidrawAPI.getAppState();
             const files = this.excalidrawAPI.getFiles();
 
+            console.log('Saving whiteboard data...');
+            console.log('Elements count:', elements ? elements.length : 0);
+            console.log('AppState keys:', appState ? Object.keys(appState) : 'null');
+            console.log('Files count:', files ? Object.keys(files).length : 0);
+
+            // Validation des données
+            if (!elements) {
+                console.warn('No elements to save');
+            }
+            if (!appState) {
+                console.warn('No app state to save');
+            }
+
             const whiteboardData = {
-                elements: elements,
-                appState: {
+                elements: elements || [],
+                appState: appState ? {
                     viewBackgroundColor: appState.viewBackgroundColor,
                     currentItemStrokeColor: appState.currentItemStrokeColor,
                     currentItemBackgroundColor: appState.currentItemBackgroundColor,
@@ -1430,21 +1620,37 @@ class SkillsTracker {
                     currentItemOpacity: appState.currentItemOpacity,
                     gridSize: appState.gridSize,
                     colorPalette: appState.colorPalette
-                },
-                files: files
+                } : {},
+                files: files || {}
             };
 
-            const { error } = await supabase
+            console.log('Whiteboard data to save:', whiteboardData);
+
+            // Vérifier la connexion Supabase
+            if (!supabase) {
+                throw new Error('Supabase client not available');
+            }
+
+            const { data, error } = await supabase
                 .from('skills')
                 .update({ whiteboard_data: whiteboardData })
-                .eq('id', this.currentWhiteboardSkillId);
+                .eq('id', this.currentWhiteboardSkillId)
+                .select();
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error:', error);
+                throw error;
+            }
+
+            console.log('Successfully saved to database:', data);
 
             // Mettre à jour localement
             const skill = this.skills.find(s => s.id === this.currentWhiteboardSkillId);
             if (skill) {
                 skill.whiteboard_data = whiteboardData;
+                console.log('Updated local skill data:', skill);
+            } else {
+                console.warn('Skill not found in local array for ID:', this.currentWhiteboardSkillId);
             }
 
             saveBtn.textContent = '✓ Sauvegardé';
@@ -1457,11 +1663,44 @@ class SkillsTracker {
             this.renderSkills();
         } catch (error) {
             console.error('Erreur lors de la sauvegarde:', error);
-            alert('Erreur lors de la sauvegarde du tableau blanc: ' + error.message);
+            console.error('Error stack:', error.stack);
+            
+            let errorMessage = '❌ ERREUR DE SAUVEGARDE\n\n';
+            errorMessage += `Détails: ${error.message}\n\n`;
+            
+            if (error.message.includes('getSceneElements')) {
+                errorMessage += 'Problème: L\'API Excalidraw ne fonctionne pas.\n';
+                errorMessage += 'Solution: Fermez et rouvrez le tableau blanc.';
+            } else if (error.message.includes('Supabase')) {
+                errorMessage += 'Problème: Erreur de base de données.\n';
+                errorMessage += 'Solution: Vérifiez votre connexion internet.';
+            } else {
+                errorMessage += 'Problème inconnu. Consultez la console du navigateur.';
+            }
+            
+            alert(errorMessage);
             saveBtn.classList.remove('saving');
             saveBtn.textContent = '💾 Sauvegarder';
         }
     }
+
+
+
+    handleExcalidrawAPI(api) {
+        if (api) {
+            this.excalidrawAPI = api;
+            console.log('✅ ExcalidrawAPI initialized successfully');
+        }
+    }
+
+    tryFindExcalidrawAPI() {
+        // Try to find the API in the global scope
+        if (window.excalidrawAPI) {
+            this.handleExcalidrawAPI(window.excalidrawAPI);
+        }
+    }
+
+
 
     closeWhiteboard() {
         this.whiteboardModal.style.display = 'none';
@@ -1474,7 +1713,69 @@ class SkillsTracker {
         }
         this.excalidrawContainer.innerHTML = '';
     }
+
+
+
+
+
+    async testDatabaseSave() {
+        if (!this.currentWhiteboardSkillId) {
+            alert('❌ No whiteboard open!');
+            return;
+        }
+
+        const testData = {
+            elements: [
+                {
+                    id: 'test-element-1',
+                    type: 'rectangle',
+                    x: 100,
+                    y: 100,
+                    width: 200,
+                    height: 100,
+                    strokeColor: '#000000',
+                    backgroundColor: '#ffffff'
+                }
+            ],
+            appState: {
+                viewBackgroundColor: '#ffffff',
+                currentItemStrokeColor: '#000000'
+            },
+            files: {},
+            testTimestamp: new Date().toISOString()
+        };
+
+        try {
+            alert('🧪 Testing database save with dummy data...');
+            
+            const { data, error } = await supabase
+                .from('skills')
+                .update({ whiteboard_data: testData })
+                .eq('id', this.currentWhiteboardSkillId)
+                .select();
+
+            if (error) {
+                alert(`❌ DATABASE SAVE FAILED!\n\nError: ${error.message}\n\nThis means there's a database permission or connection issue.`);
+                console.error('Database save error:', error);
+            } else {
+                alert(`✅ DATABASE SAVE SUCCESSFUL!\n\nTest data was saved successfully.\nThis means the database is working.\n\nThe issue is likely with the Excalidraw API not providing data to save.`);
+                console.log('Database save successful:', data);
+                
+                // Update local data
+                const skill = this.skills.find(s => s.id === this.currentWhiteboardSkillId);
+                if (skill) {
+                    skill.whiteboard_data = testData;
+                }
+                this.renderSkills();
+            }
+        } catch (error) {
+            alert(`❌ DATABASE TEST FAILED!\n\nError: ${error.message}\n\nCheck your internet connection and Supabase setup.`);
+            console.error('Database test error:', error);
+        }
+    }
 }
 
 // Initialize the app
 const skillsTracker = new SkillsTracker();
+// Make it globally available for onclick handlers
+window.skillsTracker = skillsTracker;

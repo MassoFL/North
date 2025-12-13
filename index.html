@@ -10,9 +10,89 @@
     <title>LokedIn</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@excalidraw/excalidraw@0.17.0/dist/excalidraw.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script>
+        // Enhanced script loading with fallbacks
+        let excalidrawLoaded = false;
+        
+        function loadExcalidraw() {
+            console.log('🔄 Loading Excalidraw...');
+            
+            // Try multiple CDN sources and versions
+            const excalidrawSources = [
+                'https://unpkg.com/@excalidraw/excalidraw@0.15.0/dist/excalidraw.production.min.js',
+                'https://cdn.jsdelivr.net/npm/@excalidraw/excalidraw@0.15.0/dist/excalidraw.production.min.js',
+                'https://unpkg.com/@excalidraw/excalidraw@0.14.0/dist/excalidraw.production.min.js',
+                'https://unpkg.com/@excalidraw/excalidraw@0.13.0/dist/excalidraw.production.min.js'
+            ];
+            
+            function tryLoadExcalidraw(index = 0) {
+                if (index >= excalidrawSources.length) {
+                    console.error('❌ Failed to load Excalidraw from all sources');
+                    alert('Erreur: Impossible de charger Excalidraw. Vérifiez votre connexion internet.');
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = excalidrawSources[index];
+                script.onload = function() {
+                    console.log('✅ Excalidraw loaded from:', excalidrawSources[index]);
+                    excalidrawLoaded = true;
+                    checkAllDependencies();
+                };
+                script.onerror = function() {
+                    console.warn('❌ Failed to load from:', excalidrawSources[index]);
+                    tryLoadExcalidraw(index + 1);
+                };
+                document.head.appendChild(script);
+            }
+            
+            tryLoadExcalidraw();
+        }
+        
+        function checkAllDependencies() {
+            console.log('🔍 Checking all dependencies...');
+            console.log('React:', typeof React !== 'undefined' ? '✅' : '❌');
+            console.log('ReactDOM:', typeof ReactDOM !== 'undefined' ? '✅' : '❌');
+            console.log('Supabase:', typeof supabase !== 'undefined' ? '✅' : '❌');
+            console.log('ExcalidrawLib:', typeof window.ExcalidrawLib !== 'undefined' ? '✅' : '❌');
+            console.log('Excalidraw:', typeof window.Excalidraw !== 'undefined' ? '✅' : '❌');
+            
+            // List all Excalidraw-related globals
+            const excalidrawGlobals = Object.keys(window).filter(key => 
+                key.toLowerCase().includes('excal') || 
+                (window[key] && typeof window[key] === 'object' && window[key].Excalidraw)
+            );
+            console.log('Excalidraw-related globals:', excalidrawGlobals);
+            
+            // Try to access Excalidraw in different ways
+            if (window.ExcalidrawLib) {
+                console.log('ExcalidrawLib contents:', Object.keys(window.ExcalidrawLib));
+            }
+            if (window.Excalidraw) {
+                console.log('Excalidraw type:', typeof window.Excalidraw);
+            }
+            
+            // Check if all critical dependencies are loaded
+            const allLoaded = typeof React !== 'undefined' && 
+                            typeof ReactDOM !== 'undefined' && 
+                            typeof supabase !== 'undefined' && 
+                            (typeof window.ExcalidrawLib !== 'undefined' || typeof window.Excalidraw !== 'undefined');
+            
+            if (allLoaded) {
+                console.log('🎉 All dependencies loaded successfully!');
+            } else {
+                console.error('❌ Some dependencies failed to load');
+            }
+        }
+        
+        // Load Excalidraw after other scripts
+        window.addEventListener('load', function() {
+            console.log('📄 Page loaded. Loading Excalidraw...');
+            setTimeout(loadExcalidraw, 100); // Small delay to ensure other scripts are ready
+        });
+    </script>
 </head>
 
 <body>
@@ -88,7 +168,7 @@
                         <label>Milestones du projet :</label>
                         <div id="milestonesContainer">
                             <div class="milestone-input">
-                                <input type="text" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
+                                <input type="text" id="milestone-initial" class="milestone-name" placeholder="Nom du milestone" maxlength="100">
                                 <button type="button" class="remove-milestone" onclick="this.parentElement.remove()">×</button>
                             </div>
                         </div>
