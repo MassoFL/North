@@ -413,6 +413,7 @@ class SkillsTracker {
         if (duplicateSkill) {
             const typeLabels = {
                 continuous: 'habitude',
+                task: 'tâche',
                 project: 'projet',
                 target: 'objectif'
             };
@@ -662,6 +663,8 @@ class SkillsTracker {
             maxHours = target;
         } else if (type === 'project') {
             maxHours = 100; // Projets plus longs
+        } else if (type === 'task') {
+            maxHours = 30; // Tâches plus courtes que les projets
         }
         
         const progress = Math.min(hours / maxHours, 1);
@@ -714,6 +717,8 @@ class SkillsTracker {
     getSkillUnitLabel(skill) {
         if (skill.type === 'continuous') {
             return skill.hours === 1 ? 'point' : 'points';
+        } else if (skill.type === 'task') {
+            return skill.hours === 1 ? 'heure' : 'heures';
         } else if (skill.type === 'target' && skill.target_unit) {
             // Pour les objectifs quantifiés, utiliser l'unité personnalisée
             return skill.target_unit;
@@ -725,6 +730,7 @@ class SkillsTracker {
     renderSkillItem(skill) {
         const typeLabels = {
             continuous: 'Habitude',
+            task: 'Tâche',
             project: 'Projet',
             target: 'Objectif'
         };
@@ -1015,6 +1021,7 @@ class SkillsTracker {
     renderArchivedSkillItem(skill) {
         const typeLabels = {
             continuous: 'Habitude',
+            task: 'Tâche',
             project: 'Projet',
             target: 'Objectif'
         };
@@ -1027,6 +1034,7 @@ class SkillsTracker {
             const completedCount = milestones.filter(m => m.completed).length;
             completionInfo = `${completedCount}/${milestones.length} milestones`;
         } else {
+            // For continuous habits and tasks
             completionInfo = `${skill.hours} ${this.getSkillUnitLabel(skill)}`;
         }
 
