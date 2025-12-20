@@ -569,6 +569,25 @@ class SkillsTracker {
         }
     }
 
+    async decrementSkill(skillId) {
+        const skill = this.skills.find(s => s.id === skillId);
+        if (skill && skill.hours > 0) {
+            try {
+                const { error } = await supabaseClient
+                    .from('skills')
+                    .update({ hours: skill.hours - 1 })
+                    .eq('id', skillId);
+
+                if (error) throw error;
+
+                skill.hours--;
+                this.renderSkills();
+            } catch (error) {
+                alert('Erreur lors de la mise à jour: ' + error.message);
+            }
+        }
+    }
+
     async deleteSkill(skillId) {
         if (confirm('Êtes-vous sûr de vouloir supprimer cette compétence ?')) {
             try {
@@ -801,9 +820,14 @@ class SkillsTracker {
                         📋
                     </button>
                     ${!isCompleted ? `
-                        <button class="increment-btn" draggable="false" onclick="skillsTracker.incrementSkill(${skill.id})">
-                            +
-                        </button>
+                        <div class="increment-controls">
+                            <button class="decrement-btn" draggable="false" onclick="skillsTracker.decrementSkill(${skill.id})" ${skill.hours <= 0 ? 'disabled' : ''}>
+                                −
+                            </button>
+                            <button class="increment-btn" draggable="false" onclick="skillsTracker.incrementSkill(${skill.id})">
+                                +
+                            </button>
+                        </div>
                     ` : `
                         <button class="archive-btn" draggable="false" onclick="skillsTracker.archiveSkill(${skill.id})">
                             Archiver

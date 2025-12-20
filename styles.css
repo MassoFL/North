@@ -424,7 +424,13 @@ h1 {
     gap: 12px;
 }
 
-.increment-btn {
+.increment-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.increment-btn, .decrement-btn {
     background: #000;
     color: #fff;
     border: none;
@@ -440,8 +446,18 @@ h1 {
     justify-content: center;
 }
 
-.increment-btn:hover {
+.increment-btn:hover, .decrement-btn:hover {
     background: #333;
+}
+
+.decrement-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.decrement-btn:disabled:hover {
+    background: #ccc;
 }
 
 .completed-badge {
@@ -1211,10 +1227,14 @@ h1 {
         height: 10px;
     }
     
-    .increment-btn {
+    .increment-btn, .decrement-btn {
         width: 32px;
         height: 32px;
         font-size: 16px;
+    }
+    
+    .increment-controls {
+        gap: 6px;
     }
     
     .archive-btn {
@@ -1288,10 +1308,14 @@ h1 {
         gap: 8px;
     }
     
-    .increment-btn {
+    .increment-btn, .decrement-btn {
         width: 32px;
         height: 32px;
         font-size: 12px;
+    }
+    
+    .increment-controls {
+        gap: 4px;
     }
     
     .delete-btn {
