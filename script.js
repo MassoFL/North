@@ -9,9 +9,9 @@ console.log('Environment:', {
     isProduction: window.location.host.includes('vercel.app')
 });
 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-console.log('Client Supabase créé:', supabase);
+console.log('Client Supabase créé:', supabaseClient);
 
 // Test de base pour vérifier que Supabase fonctionne
 if (!window.supabase) {
@@ -177,7 +177,7 @@ class SkillsTracker {
     async checkAuth() {
         try {
             console.log('Vérification de l\'authentification...');
-            const { data: { session }, error } = await supabase.auth.getSession();
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
             
             console.log('Session check result:', { session, error, environment: window.location.host });
             
@@ -271,10 +271,10 @@ class SkillsTracker {
             let result;
             if (isLogin) {
                 console.log('Connexion avec Supabase...');
-                result = await supabase.auth.signInWithPassword({ email, password });
+                result = await supabaseClient.auth.signInWithPassword({ email, password });
             } else {
                 console.log('Inscription avec Supabase...');
-                result = await supabase.auth.signUp({ email, password });
+                result = await supabaseClient.auth.signUp({ email, password });
             }
 
             console.log('Résultat Supabase complet:', {
@@ -324,7 +324,7 @@ class SkillsTracker {
     }
 
     async logout() {
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
         this.user = null;
         this.skills = [];
         
@@ -452,7 +452,7 @@ class SkillsTracker {
         try {
             if (this.editingSkillId) {
                 // Mode édition
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('skills')
                     .update({
                         name: skillName,
@@ -498,7 +498,7 @@ class SkillsTracker {
                     console.log('order_index column not available yet');
                 }
                 
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('skills')
                     .insert([skillData])
                     .select();
@@ -554,7 +554,7 @@ class SkillsTracker {
         const skill = this.skills.find(s => s.id === skillId);
         if (skill) {
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('skills')
                     .update({ hours: skill.hours + 1 })
                     .eq('id', skillId);
@@ -572,7 +572,7 @@ class SkillsTracker {
     async deleteSkill(skillId) {
         if (confirm('Êtes-vous sûr de vouloir supprimer cette compétence ?')) {
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('skills')
                     .delete()
                     .eq('id', skillId);
@@ -594,7 +594,7 @@ class SkillsTracker {
             // Vérifier d'abord si la colonne whiteboard_data existe
             await this.checkWhiteboardColumn();
             
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('skills')
                 .select('*')
                 .eq('user_id', this.user.id)
@@ -632,7 +632,7 @@ class SkillsTracker {
 
     async checkWhiteboardColumn() {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('information_schema.columns')
                 .select('column_name')
                 .eq('table_name', 'skills')
@@ -834,7 +834,7 @@ class SkillsTracker {
                 const milestones = JSON.parse(skill.milestones);
                 milestones[milestoneIndex].completed = !milestones[milestoneIndex].completed;
                 
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('skills')
                     .update({ milestones: JSON.stringify(milestones) })
                     .eq('id', skillId);
@@ -931,7 +931,7 @@ class SkillsTracker {
     async archiveSkill(skillId) {
         if (confirm('Êtes-vous sûr de vouloir archiver cette tâche terminée ?')) {
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('skills')
                     .update({ archived: true })
                     .eq('id', skillId);
@@ -969,7 +969,7 @@ class SkillsTracker {
 
     async loadArchivedSkills() {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('skills')
                 .select('*')
                 .eq('user_id', this.user.id)
@@ -1061,7 +1061,7 @@ class SkillsTracker {
     async restoreSkill(skillId) {
         if (confirm('Restaurer cette tâche dans vos objectifs actifs ?')) {
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('skills')
                     .update({ archived: false })
                     .eq('id', skillId);
@@ -1082,7 +1082,7 @@ class SkillsTracker {
     async deleteArchivedSkill(skillId) {
         if (confirm('Supprimer définitivement cette tâche archivée ? Cette action est irréversible.')) {
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('skills')
                     .delete()
                     .eq('id', skillId);
@@ -1288,7 +1288,7 @@ class SkillsTracker {
         if (updates.length > 0) {
             try {
                 for (const update of updates) {
-                    await supabase
+                    await supabaseClient
                         .from('skills')
                         .update({ order_index: update.order_index })
                         .eq('id', update.id);
@@ -1635,11 +1635,11 @@ class SkillsTracker {
             console.log('Whiteboard data to save:', whiteboardData);
 
             // Vérifier la connexion Supabase
-            if (!supabase) {
+            if (!supabaseClient) {
                 throw new Error('Supabase client not available');
             }
 
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('skills')
                 .update({ whiteboard_data: whiteboardData })
                 .eq('id', this.currentWhiteboardSkillId)
@@ -1756,7 +1756,7 @@ class SkillsTracker {
         try {
             alert('🧪 Testing database save with dummy data...');
             
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('skills')
                 .update({ whiteboard_data: testData })
                 .eq('id', this.currentWhiteboardSkillId)

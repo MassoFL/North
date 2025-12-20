@@ -55,7 +55,7 @@
             console.log('🔍 Checking all dependencies...');
             console.log('React:', typeof React !== 'undefined' ? '✅' : '❌');
             console.log('ReactDOM:', typeof ReactDOM !== 'undefined' ? '✅' : '❌');
-            console.log('Supabase:', typeof supabase !== 'undefined' ? '✅' : '❌');
+            console.log('Supabase:', typeof window.supabase !== 'undefined' ? '✅' : '❌');
             console.log('ExcalidrawLib:', typeof window.ExcalidrawLib !== 'undefined' ? '✅' : '❌');
             console.log('Excalidraw:', typeof window.Excalidraw !== 'undefined' ? '✅' : '❌');
             
@@ -77,7 +77,7 @@
             // Check if all critical dependencies are loaded
             const allLoaded = typeof React !== 'undefined' && 
                             typeof ReactDOM !== 'undefined' && 
-                            typeof supabase !== 'undefined' && 
+                            typeof window.supabase !== 'undefined' && 
                             (typeof window.ExcalidrawLib !== 'undefined' || typeof window.Excalidraw !== 'undefined');
             
             if (allLoaded) {
