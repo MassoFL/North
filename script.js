@@ -2105,8 +2105,13 @@ class SkillsTracker {
             gridModeEnabled: false,
             theme: 'dark',
             onChange: (elements, appState, files) => {
-                if (!readOnly && this.currentMapMode === 'edit') {
-                    this.tempMapData = { elements, appState, files };
+                if (!readOnly) {
+                    // Store the data whenever it changes
+                    this.tempMapData = { 
+                        elements: elements,
+                        appState: appState,
+                        files: files 
+                    };
                 }
             },
             ref: (api) => {
@@ -2129,8 +2134,18 @@ class SkillsTracker {
 
     async saveSharedMap() {
         try {
-            if (!this.tempMapData) {
-                alert('Aucune donnée à sauvegarder');
+            // Get current data from Excalidraw API if tempMapData is not set
+            let dataToSave = this.tempMapData;
+            
+            if (!dataToSave && this.viewExcalidrawAPI) {
+                const elements = this.viewExcalidrawAPI.getSceneElements();
+                const appState = this.viewExcalidrawAPI.getAppState();
+                const files = this.viewExcalidrawAPI.getFiles();
+                dataToSave = { elements, appState, files };
+            }
+            
+            if (!dataToSave || !dataToSave.elements || dataToSave.elements.length === 0) {
+                alert('Créez du contenu avant de sauvegarder');
                 return;
             }
 
@@ -2138,7 +2153,7 @@ class SkillsTracker {
                 title: this.tempMapMetadata.title,
                 description: this.tempMapMetadata.description,
                 is_public: this.tempMapMetadata.isPublic,
-                excalidraw_data: this.tempMapData,
+                excalidraw_data: dataToSave,
                 owner_id: this.user.id
             };
 
@@ -2201,7 +2216,17 @@ class SkillsTracker {
 
     async updateSharedMap() {
         try {
-            if (!this.tempMapData) {
+            // Get current data from Excalidraw API if tempMapData is not set
+            let dataToSave = this.tempMapData;
+            
+            if (!dataToSave && this.viewExcalidrawAPI) {
+                const elements = this.viewExcalidrawAPI.getSceneElements();
+                const appState = this.viewExcalidrawAPI.getAppState();
+                const files = this.viewExcalidrawAPI.getFiles();
+                dataToSave = { elements, appState, files };
+            }
+            
+            if (!dataToSave) {
                 alert('Aucune modification à sauvegarder');
                 return;
             }
@@ -2209,7 +2234,7 @@ class SkillsTracker {
             const { error } = await supabaseClient
                 .from('shared_maps')
                 .update({
-                    excalidraw_data: this.tempMapData,
+                    excalidraw_data: dataToSave,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', this.currentMapId);
