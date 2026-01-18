@@ -2017,8 +2017,23 @@ class SkillsTracker {
         this.currentMapMode = 'edit';
         this.viewSharedMapModal.style.display = 'flex';
         document.getElementById('viewMapTitle').textContent = this.tempMapMetadata.title;
-        document.getElementById('viewMapOwner').textContent = 'Mode édition';
+        document.getElementById('viewMapOwner').textContent = 'Nouvelle map';
         document.getElementById('viewMapReadOnly').style.display = 'none';
+
+        // Clean existing buttons first
+        const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+        const closeBtn = header.querySelector('.close-btn');
+        header.innerHTML = '';
+        if (closeBtn) {
+            header.appendChild(closeBtn);
+        }
+        
+        // Add save button for new map
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'save-whiteboard-btn';
+        saveBtn.textContent = '💾 Sauvegarder le thought';
+        saveBtn.onclick = () => this.saveSharedMap();
+        header.insertBefore(saveBtn, closeBtn);
 
         // Initialize Excalidraw for editing
         this.initializeMapExcalidraw(null, false);
@@ -2049,17 +2064,21 @@ class SkillsTracker {
             
             this.viewSharedMapModal.style.display = 'flex';
             
+            // Clean existing buttons first
+            const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+            const closeBtn = header.querySelector('.close-btn');
+            header.innerHTML = '';
+            if (closeBtn) {
+                header.appendChild(closeBtn);
+            }
+            
             // Add share button if public
             if (data.is_public) {
-                const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
-                const existingShareBtn = header.querySelector('.share-thought-btn');
-                if (!existingShareBtn) {
-                    const shareBtn = document.createElement('button');
-                    shareBtn.className = 'save-whiteboard-btn share-thought-btn';
-                    shareBtn.textContent = '🔗 Partager';
-                    shareBtn.onclick = () => this.shareMapLink(mapId);
-                    header.insertBefore(shareBtn, header.lastElementChild);
-                }
+                const shareBtn = document.createElement('button');
+                shareBtn.className = 'save-whiteboard-btn share-thought-btn';
+                shareBtn.textContent = '🔗 Partager';
+                shareBtn.onclick = () => this.shareMapLink(mapId);
+                header.insertBefore(shareBtn, closeBtn);
             }
             
             // Initialize Excalidraw with map data
@@ -2079,10 +2098,15 @@ class SkillsTracker {
         // Clear the container
         document.getElementById('viewExcalidrawContainer').innerHTML = '';
         
-        // Remove share button if exists
-        const shareBtn = document.querySelector('.share-thought-btn');
-        if (shareBtn) {
-            shareBtn.remove();
+        // Remove all dynamic buttons
+        const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+        if (header) {
+            // Keep only the close button
+            const closeBtn = header.querySelector('.close-btn');
+            header.innerHTML = '';
+            if (closeBtn) {
+                header.appendChild(closeBtn);
+            }
         }
     }
 
@@ -2120,16 +2144,7 @@ class SkillsTracker {
         });
 
         ReactDOM.render(excalidrawElement, container);
-
-        // Add save button for edit mode
-        if (!readOnly && this.currentMapMode === 'edit') {
-            const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
-            const saveBtn = document.createElement('button');
-            saveBtn.className = 'save-whiteboard-btn';
-            saveBtn.textContent = '💾 Sauvegarder le thought';
-            saveBtn.onclick = () => this.saveSharedMap();
-            header.insertBefore(saveBtn, header.firstChild);
-        }
+    }
     }
 
     async saveSharedMap() {
@@ -2198,15 +2213,23 @@ class SkillsTracker {
             document.getElementById('viewMapReadOnly').style.display = 'none';
             
             this.viewSharedMapModal.style.display = 'flex';
-            this.initializeMapExcalidraw(data.excalidraw_data, false);
-
-            // Add update button
+            
+            // Clean existing buttons first
             const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+            const closeBtn = header.querySelector('.close-btn');
+            header.innerHTML = '';
+            if (closeBtn) {
+                header.appendChild(closeBtn);
+            }
+            
+            // Add update button
             const saveBtn = document.createElement('button');
             saveBtn.className = 'save-whiteboard-btn';
             saveBtn.textContent = '💾 Mettre à jour';
             saveBtn.onclick = () => this.updateSharedMap();
-            header.insertBefore(saveBtn, header.firstChild);
+            header.insertBefore(saveBtn, closeBtn);
+            
+            this.initializeMapExcalidraw(data.excalidraw_data, false);
 
         } catch (error) {
             console.error('Error loading map for edit:', error);
@@ -2374,22 +2397,25 @@ class SkillsTracker {
             
             this.viewSharedMapModal.style.display = 'flex';
             
+            // Clean existing buttons first
+            const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+            const closeBtn = header.querySelector('.close-btn');
+            header.innerHTML = '';
+            if (closeBtn) {
+                header.appendChild(closeBtn);
+            }
+            
             // Add share button if public
             if (data.is_public) {
-                const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
-                const existingShareBtn = header.querySelector('.share-thought-btn');
-                if (!existingShareBtn) {
-                    const shareBtn = document.createElement('button');
-                    shareBtn.className = 'save-whiteboard-btn share-thought-btn';
-                    shareBtn.textContent = '🔗 Partager';
-                    shareBtn.onclick = () => this.shareMapLink(mapId);
-                    header.insertBefore(shareBtn, header.lastElementChild);
-                }
+                const shareBtn = document.createElement('button');
+                shareBtn.className = 'save-whiteboard-btn share-thought-btn';
+                shareBtn.textContent = '🔗 Partager';
+                shareBtn.onclick = () => this.shareMapLink(mapId);
+                header.insertBefore(shareBtn, closeBtn);
             }
             
             // Add login prompt if not authenticated
             if (!this.user) {
-                const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
                 const loginBtn = document.createElement('button');
                 loginBtn.className = 'save-whiteboard-btn';
                 loginBtn.textContent = '🔐 Se connecter';
@@ -2397,7 +2423,7 @@ class SkillsTracker {
                     this.closeViewSharedMap();
                     this.showAuth();
                 };
-                header.insertBefore(loginBtn, header.firstChild);
+                header.insertBefore(loginBtn, closeBtn);
             }
             
             // Initialize Excalidraw with map data (always read-only if not owner)
