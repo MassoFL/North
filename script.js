@@ -2018,7 +2018,11 @@ class SkillsTracker {
         this.viewSharedMapModal.style.display = 'flex';
         document.getElementById('viewMapTitle').textContent = this.tempMapMetadata.title;
         document.getElementById('viewMapOwner').textContent = 'Nouvelle map';
-        document.getElementById('viewMapReadOnly').style.display = 'none';
+        
+        const readOnlyBadge = document.getElementById('viewMapReadOnly');
+        if (readOnlyBadge) {
+            readOnlyBadge.style.display = 'none';
+        }
 
         // Clean existing buttons first
         const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
@@ -2066,7 +2070,11 @@ class SkillsTracker {
             
             document.getElementById('viewMapTitle').textContent = data.title;
             document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Independent Thought';
-            document.getElementById('viewMapReadOnly').style.display = isOwner ? 'none' : 'inline-block';
+            
+            const readOnlyBadge = document.getElementById('viewMapReadOnly');
+            if (readOnlyBadge) {
+                readOnlyBadge.style.display = isOwner ? 'none' : 'inline-block';
+            }
             
             this.viewSharedMapModal.style.display = 'flex';
             
@@ -2228,7 +2236,11 @@ class SkillsTracker {
 
             document.getElementById('viewMapTitle').textContent = data.title;
             document.getElementById('viewMapOwner').textContent = 'Mode édition';
-            document.getElementById('viewMapReadOnly').style.display = 'none';
+            
+            const readOnlyBadge = document.getElementById('viewMapReadOnly');
+            if (readOnlyBadge) {
+                readOnlyBadge.style.display = 'none';
+            }
             
             this.viewSharedMapModal.style.display = 'flex';
             
@@ -2417,7 +2429,11 @@ class SkillsTracker {
             
             document.getElementById('viewMapTitle').textContent = data.title;
             document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Independent Thought';
-            document.getElementById('viewMapReadOnly').style.display = isOwner ? 'none' : 'inline-block';
+            
+            const readOnlyBadge = document.getElementById('viewMapReadOnly');
+            if (readOnlyBadge) {
+                readOnlyBadge.style.display = isOwner ? 'none' : 'inline-block';
+            }
             
             this.viewSharedMapModal.style.display = 'flex';
             
