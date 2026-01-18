@@ -198,7 +198,13 @@ class SkillsTracker {
             
             if (error) {
                 console.error('Erreur lors de la vérification de session:', error);
-                this.showAuth();
+                // Check if there's a shared map in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('thought')) {
+                    this.showAuthWithMessage();
+                } else {
+                    this.showAuth();
+                }
                 return;
             }
             
@@ -215,8 +221,14 @@ class SkillsTracker {
                     this.showApp();
                 }
             } else {
-                console.log('Aucune session trouvée, affichage de l\'auth');
-                this.showAuth();
+                console.log('Aucune session trouvée');
+                // Check if there's a shared map in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('thought')) {
+                    this.showAuthWithMessage();
+                } else {
+                    this.showAuth();
+                }
             }
         } catch (error) {
             console.error('Erreur dans checkAuth:', error);
@@ -227,6 +239,25 @@ class SkillsTracker {
     showAuth() {
         this.authModal.style.display = 'flex';
         document.querySelector('.container').style.display = 'none';
+    }
+
+    showAuthWithMessage() {
+        // Show auth modal with a message about viewing the shared thought
+        this.authModal.style.display = 'flex';
+        document.querySelector('.container').style.display = 'none';
+        
+        // Add a message above the form
+        const existingMessage = document.querySelector('.auth-shared-message');
+        if (!existingMessage) {
+            const message = document.createElement('div');
+            message.className = 'auth-shared-message';
+            message.style.cssText = 'background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #4a9eff;';
+            message.innerHTML = `
+                <p style="color: #4a9eff; margin: 0 0 10px 0; font-weight: 600;">📖 Thought partagé</p>
+                <p style="color: #888; margin: 0; font-size: 14px;">Connectez-vous ou créez un compte pour voir ce thought</p>
+            `;
+            this.authForm.parentElement.insertBefore(message, this.authForm);
+        }
     }
 
     showApp() {
@@ -2273,25 +2304,17 @@ class SkillsTracker {
         const thoughtId = urlParams.get('thought');
         
         if (thoughtId) {
-            // Wait for user to be authenticated
-            const checkAuth = setInterval(() => {
-                if (this.user) {
-                    clearInterval(checkAuth);
-                    this.viewSharedMapFromUrl(parseInt(thoughtId));
-                }
-            }, 100);
-            
-            // Timeout after 5 seconds
-            setTimeout(() => clearInterval(checkAuth), 5000);
+            // Try to view immediately (works for public thoughts)
+            // If user is not authenticated, will show auth modal but still attempt to load
+            setTimeout(() => {
+                this.viewSharedMapFromUrl(parseInt(thoughtId));
+            }, 500);
         }
     }
 
     async viewSharedMapFromUrl(mapId) {
         try {
-            // Increment view count
-            await supabaseClient.rpc('increment_map_view_count', { map_id: mapId });
-
-            // Load map data
+            // Load map data (no auth required for public maps)
             const { data, error } = await supabaseClient
                 .from('shared_maps')
                 .select('*')
@@ -2300,17 +2323,25 @@ class SkillsTracker {
 
             if (error) throw error;
 
-            if (!data.is_public && data.owner_id !== this.user.id) {
-                alert('Ce thought est privé et vous n\'avez pas accès.');
-                // Clean URL
+            // Check if map is public or user is owner
+            if (!data.is_public && (!this.user || data.owner_id !== this.user.id)) {
+                alert('Ce thought est privé. Connectez-vous pour y accéder.');
                 window.history.replaceState({}, document.title, window.location.pathname);
                 return;
+            }
+
+            // Increment view count (only if public or user is authenticated)
+            if (data.is_public || this.user) {
+                await supabaseClient.rpc('increment_map_view_count', { map_id: mapId });
             }
 
             this.currentMapId = mapId;
             this.currentMapMode = 'view';
             
-            const isOwner = data.owner_id === this.user.id;
+            const isOwner = this.user && data.owner_id === this.user.id;
+            
+            // Hide auth modal if showing
+            this.authModal.style.display = 'none';
             
             document.getElementById('viewMapTitle').textContent = data.title;
             document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Independent Thought';
@@ -2318,7 +2349,33 @@ class SkillsTracker {
             
             this.viewSharedMapModal.style.display = 'flex';
             
-            // Initialize Excalidraw with map data
+            // Add share button if public
+            if (data.is_public) {
+                const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+                const existingShareBtn = header.querySelector('.share-thought-btn');
+                if (!existingShareBtn) {
+                    const shareBtn = document.createElement('button');
+                    shareBtn.className = 'save-whiteboard-btn share-thought-btn';
+                    shareBtn.textContent = '🔗 Partager';
+                    shareBtn.onclick = () => this.shareMapLink(mapId);
+                    header.insertBefore(shareBtn, header.lastElementChild);
+                }
+            }
+            
+            // Add login prompt if not authenticated
+            if (!this.user) {
+                const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+                const loginBtn = document.createElement('button');
+                loginBtn.className = 'save-whiteboard-btn';
+                loginBtn.textContent = '🔐 Se connecter';
+                loginBtn.onclick = () => {
+                    this.closeViewSharedMap();
+                    this.showAuth();
+                };
+                header.insertBefore(loginBtn, header.firstChild);
+            }
+            
+            // Initialize Excalidraw with map data (always read-only if not owner)
             this.initializeMapExcalidraw(data.excalidraw_data, !isOwner);
             
             // Clean URL after opening
@@ -2327,7 +2384,6 @@ class SkillsTracker {
         } catch (error) {
             console.error('Error viewing map from URL:', error);
             alert('Erreur lors du chargement du thought. Il n\'existe peut-être plus.');
-            // Clean URL
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }
