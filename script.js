@@ -2145,7 +2145,6 @@ class SkillsTracker {
 
         ReactDOM.render(excalidrawElement, container);
     }
-    }
 
     async saveSharedMap() {
         try {
