@@ -2203,11 +2203,18 @@ class SkillsTracker {
 
     async editMap(mapId) {
         try {
+            console.log('Editing map:', mapId);
+            
+            // Close shared maps modal first
+            this.closeSharedMapsModal();
+            
             const { data, error } = await supabaseClient
                 .from('shared_maps')
                 .select('*')
                 .eq('id', mapId)
                 .single();
+
+            console.log('Map data loaded:', data, 'Error:', error);
 
             if (error) throw error;
 
