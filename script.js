@@ -2127,7 +2127,7 @@ class SkillsTracker {
             viewModeEnabled: readOnly,
             zenModeEnabled: false,
             gridModeEnabled: false,
-            theme: 'dark',
+            theme: 'light',
             onChange: (elements, appState, files) => {
                 if (!readOnly) {
                     // Store the data whenever it changes
