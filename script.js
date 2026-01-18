@@ -2022,11 +2022,17 @@ class SkillsTracker {
 
         // Clean existing buttons first
         const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
-        const closeBtn = header.querySelector('.close-btn');
+        let closeBtn = header.querySelector('.close-btn');
         header.innerHTML = '';
-        if (closeBtn) {
-            header.appendChild(closeBtn);
+        
+        // Recreate close button if it doesn't exist
+        if (!closeBtn) {
+            closeBtn = document.createElement('button');
+            closeBtn.className = 'close-btn';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => this.closeViewSharedMap();
         }
+        header.appendChild(closeBtn);
         
         // Add save button for new map
         const saveBtn = document.createElement('button');
@@ -2066,11 +2072,17 @@ class SkillsTracker {
             
             // Clean existing buttons first
             const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
-            const closeBtn = header.querySelector('.close-btn');
+            let closeBtn = header.querySelector('.close-btn');
             header.innerHTML = '';
-            if (closeBtn) {
-                header.appendChild(closeBtn);
+            
+            // Recreate close button if it doesn't exist
+            if (!closeBtn) {
+                closeBtn = document.createElement('button');
+                closeBtn.className = 'close-btn';
+                closeBtn.textContent = '×';
+                closeBtn.onclick = () => this.closeViewSharedMap();
             }
+            header.appendChild(closeBtn);
             
             // Add share button if public
             if (data.is_public) {
@@ -2215,11 +2227,17 @@ class SkillsTracker {
             
             // Clean existing buttons first
             const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
-            const closeBtn = header.querySelector('.close-btn');
+            let closeBtn = header.querySelector('.close-btn');
             header.innerHTML = '';
-            if (closeBtn) {
-                header.appendChild(closeBtn);
+            
+            // Recreate close button if it doesn't exist
+            if (!closeBtn) {
+                closeBtn = document.createElement('button');
+                closeBtn.className = 'close-btn';
+                closeBtn.textContent = '×';
+                closeBtn.onclick = () => this.closeViewSharedMap();
             }
+            header.appendChild(closeBtn);
             
             // Add update button
             const saveBtn = document.createElement('button');
@@ -2398,11 +2416,17 @@ class SkillsTracker {
             
             // Clean existing buttons first
             const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
-            const closeBtn = header.querySelector('.close-btn');
+            let closeBtn = header.querySelector('.close-btn');
             header.innerHTML = '';
-            if (closeBtn) {
-                header.appendChild(closeBtn);
+            
+            // Recreate close button if it doesn't exist
+            if (!closeBtn) {
+                closeBtn = document.createElement('button');
+                closeBtn.className = 'close-btn';
+                closeBtn.textContent = '×';
+                closeBtn.onclick = () => this.closeViewSharedMap();
             }
+            header.appendChild(closeBtn);
             
             // Add share button if public
             if (data.is_public) {
