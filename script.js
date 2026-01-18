@@ -39,9 +39,14 @@ class SkillsTracker {
         this.editingSkillId = null;
         this.excalidrawAPI = null;
         this.currentWhiteboardSkillId = null;
+        this.sharedMaps = [];
+        this.currentMapId = null;
+        this.currentMapMode = 'view'; // 'view' or 'edit'
+        this.viewExcalidrawAPI = null;
         this.initializeElements();
         this.bindEvents();
         this.checkAuth();
+        this.checkUrlForSharedMap();
     }
 
     initializeElements() {
@@ -122,6 +127,16 @@ class SkillsTracker {
         this.archiveBtn.addEventListener('click', () => this.openArchiveModal());
         this.skillType.addEventListener('change', () => this.handleSkillTypeChange());
         this.addMilestoneBtn.addEventListener('click', () => this.addMilestoneInput());
+        
+        // Shared Maps
+        this.sharedMapsBtn = document.getElementById('sharedMapsBtn');
+        this.sharedMapsModal = document.getElementById('sharedMapsModal');
+        this.createMapModal = document.getElementById('createMapModal');
+        this.viewSharedMapModal = document.getElementById('viewSharedMapModal');
+        this.saveMapMetaBtn = document.getElementById('saveMapMetaBtn');
+        
+        this.sharedMapsBtn.addEventListener('click', () => this.openSharedMapsModal());
+        this.saveMapMetaBtn.addEventListener('click', () => this.saveMapMetadata());
         
         // Add goal modal
         this.addGoalBtn = document.getElementById('addGoalBtn');
@@ -1804,6 +1819,523 @@ class SkillsTracker {
             alert(`❌ DATABASE TEST FAILED!\n\nError: ${error.message}\n\nCheck your internet connection and Supabase setup.`);
             console.error('Database test error:', error);
         }
+    }
+
+    // ===== SHARED MAPS FUNCTIONS =====
+
+    async openSharedMapsModal() {
+        this.sharedMapsModal.style.display = 'flex';
+        this.switchMapsTab('browse');
+        await this.loadSharedMaps();
+    }
+
+    closeSharedMapsModal() {
+        this.sharedMapsModal.style.display = 'none';
+    }
+
+    switchMapsTab(tab) {
+        const tabs = document.querySelectorAll('.tab-btn');
+        tabs.forEach(t => t.classList.remove('active'));
+        
+        if (tab === 'browse') {
+            tabs[0].classList.add('active');
+            document.getElementById('browseMapsTab').style.display = 'block';
+            document.getElementById('myMapsTab').style.display = 'none';
+            this.loadSharedMaps();
+        } else {
+            tabs[1].classList.add('active');
+            document.getElementById('browseMapsTab').style.display = 'none';
+            document.getElementById('myMapsTab').style.display = 'block';
+            this.loadMyMaps();
+        }
+    }
+
+    async loadSharedMaps() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('shared_maps')
+                .select('*')
+                .eq('is_public', true)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            this.sharedMaps = data || [];
+            this.renderSharedMaps();
+        } catch (error) {
+            console.error('Error loading shared maps:', error);
+            alert('Erreur lors du chargement des thoughts partagés');
+        }
+    }
+
+    async loadMyMaps() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('shared_maps')
+                .select('*')
+                .eq('owner_id', this.user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            this.renderMyMaps(data || []);
+        } catch (error) {
+            console.error('Error loading my maps:', error);
+            alert('Erreur lors du chargement de vos thoughts');
+        }
+    }
+
+    renderSharedMaps() {
+        const grid = document.getElementById('sharedMapsGrid');
+        
+        if (this.sharedMaps.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-maps-message">
+                    <h3>Aucun thought partagé pour le moment</h3>
+                    <p>Soyez le premier à créer un Independent Thought !</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = this.sharedMaps.map(map => `
+            <div class="map-card" onclick="skillsTracker.viewSharedMap(${map.id})">
+                <div class="map-card-header">
+                    <h3 class="map-card-title">${this.escapeHtml(map.title)}</h3>
+                    <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.shareMapLink(${map.id})" title="Partager le lien">🔗</button>
+                </div>
+                ${map.description ? `<p class="map-card-description">${this.escapeHtml(map.description)}</p>` : ''}
+                <div class="map-card-footer">
+                    <span class="map-owner">Independent Thought</span>
+                    <div class="map-stats">
+                        <span class="map-stat">👁️ ${map.view_count || 0}</span>
+                        <span class="map-stat">📅 ${new Date(map.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderMyMaps(maps) {
+        const grid = document.getElementById('myMapsGrid');
+        
+        if (maps.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-maps-message">
+                    <h3>Vous n'avez pas encore de thoughts</h3>
+                    <p>Créez votre premier Independent Thought !</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = maps.map(map => `
+            <div class="map-card">
+                <div class="map-card-header">
+                    <h3 class="map-card-title">${this.escapeHtml(map.title)}</h3>
+                    <div class="map-card-actions">
+                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.shareMapLink(${map.id})" title="Partager le lien">🔗</button>
+                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.editMap(${map.id})" title="Modifier">✏️</button>
+                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.deleteMap(${map.id})" title="Supprimer">🗑️</button>
+                    </div>
+                </div>
+                ${map.description ? `<p class="map-card-description">${this.escapeHtml(map.description)}</p>` : ''}
+                <div class="map-card-footer">
+                    <span class="map-owner">${map.is_public ? '🌍 Public' : '🔒 Privé'}</span>
+                    <div class="map-stats">
+                        <span class="map-stat">👁️ ${map.view_count || 0}</span>
+                        <span class="map-stat">📅 ${new Date(map.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    openCreateMapModal() {
+        this.currentMapId = null;
+        document.getElementById('createMapTitle').textContent = 'Créer un Independent Thought';
+        document.getElementById('mapTitle').value = '';
+        document.getElementById('mapDescription').value = '';
+        document.getElementById('mapIsPublic').checked = true;
+        this.createMapModal.style.display = 'flex';
+    }
+
+    closeCreateMapModal() {
+        this.createMapModal.style.display = 'none';
+    }
+
+    async saveMapMetadata() {
+        const title = document.getElementById('mapTitle').value.trim();
+        const description = document.getElementById('mapDescription').value.trim();
+        const isPublic = document.getElementById('mapIsPublic').checked;
+
+        if (!title) {
+            alert('Veuillez entrer un titre pour le thought');
+            return;
+        }
+
+        // Store metadata temporarily
+        this.tempMapMetadata = { title, description, isPublic };
+        
+        // Close metadata modal and open Excalidraw editor
+        this.closeCreateMapModal();
+        this.openMapEditor();
+    }
+
+    openMapEditor() {
+        this.currentMapMode = 'edit';
+        this.viewSharedMapModal.style.display = 'flex';
+        document.getElementById('viewMapTitle').textContent = this.tempMapMetadata.title;
+        document.getElementById('viewMapOwner').textContent = 'Mode édition';
+        document.getElementById('viewMapReadOnly').style.display = 'none';
+
+        // Initialize Excalidraw for editing
+        this.initializeMapExcalidraw(null, false);
+    }
+
+    async viewSharedMap(mapId) {
+        try {
+            // Increment view count
+            await supabaseClient.rpc('increment_map_view_count', { map_id: mapId });
+
+            // Load map data
+            const { data, error } = await supabaseClient
+                .from('shared_maps')
+                .select('*')
+                .eq('id', mapId)
+                .single();
+
+            if (error) throw error;
+
+            this.currentMapId = mapId;
+            this.currentMapMode = 'view';
+            
+            const isOwner = data.owner_id === this.user.id;
+            
+            document.getElementById('viewMapTitle').textContent = data.title;
+            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Independent Thought';
+            document.getElementById('viewMapReadOnly').style.display = isOwner ? 'none' : 'inline-block';
+            
+            this.viewSharedMapModal.style.display = 'flex';
+            
+            // Add share button if public
+            if (data.is_public) {
+                const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+                const existingShareBtn = header.querySelector('.share-thought-btn');
+                if (!existingShareBtn) {
+                    const shareBtn = document.createElement('button');
+                    shareBtn.className = 'save-whiteboard-btn share-thought-btn';
+                    shareBtn.textContent = '🔗 Partager';
+                    shareBtn.onclick = () => this.shareMapLink(mapId);
+                    header.insertBefore(shareBtn, header.lastElementChild);
+                }
+            }
+            
+            // Initialize Excalidraw with map data
+            this.initializeMapExcalidraw(data.excalidraw_data, !isOwner);
+            
+        } catch (error) {
+            console.error('Error viewing map:', error);
+            alert('Erreur lors du chargement du thought');
+        }
+    }
+
+    closeViewSharedMap() {
+        this.viewSharedMapModal.style.display = 'none';
+        if (this.viewExcalidrawAPI) {
+            this.viewExcalidrawAPI = null;
+        }
+        // Clear the container
+        document.getElementById('viewExcalidrawContainer').innerHTML = '';
+        
+        // Remove share button if exists
+        const shareBtn = document.querySelector('.share-thought-btn');
+        if (shareBtn) {
+            shareBtn.remove();
+        }
+    }
+
+    initializeMapExcalidraw(initialData, readOnly) {
+        const container = document.getElementById('viewExcalidrawContainer');
+        container.innerHTML = '';
+
+        // Check if Excalidraw is available
+        const ExcalidrawComponent = window.ExcalidrawLib?.Excalidraw || window.Excalidraw;
+        
+        if (!ExcalidrawComponent) {
+            container.innerHTML = '<div style="color: white; padding: 20px;">Erreur: Excalidraw non chargé. Rechargez la page.</div>';
+            return;
+        }
+
+        const excalidrawElement = React.createElement(ExcalidrawComponent, {
+            initialData: initialData || { elements: [], appState: {} },
+            viewModeEnabled: readOnly,
+            zenModeEnabled: false,
+            gridModeEnabled: false,
+            theme: 'dark',
+            onChange: (elements, appState, files) => {
+                if (!readOnly && this.currentMapMode === 'edit') {
+                    this.tempMapData = { elements, appState, files };
+                }
+            },
+            ref: (api) => {
+                this.viewExcalidrawAPI = api;
+            }
+        });
+
+        ReactDOM.render(excalidrawElement, container);
+
+        // Add save button for edit mode
+        if (!readOnly && this.currentMapMode === 'edit') {
+            const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'save-whiteboard-btn';
+            saveBtn.textContent = '💾 Sauvegarder le thought';
+            saveBtn.onclick = () => this.saveSharedMap();
+            header.insertBefore(saveBtn, header.firstChild);
+        }
+    }
+
+    async saveSharedMap() {
+        try {
+            if (!this.tempMapData) {
+                alert('Aucune donnée à sauvegarder');
+                return;
+            }
+
+            const mapData = {
+                title: this.tempMapMetadata.title,
+                description: this.tempMapMetadata.description,
+                is_public: this.tempMapMetadata.isPublic,
+                excalidraw_data: this.tempMapData,
+                owner_id: this.user.id
+            };
+
+            const { data, error } = await supabaseClient
+                .from('shared_maps')
+                .insert([mapData])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            alert('✅ Thought sauvegardé avec succès !');
+            this.closeViewSharedMap();
+            this.switchMapsTab('my-maps');
+            
+        } catch (error) {
+            console.error('Error saving map:', error);
+            alert('Erreur lors de la sauvegarde du thought');
+        }
+    }
+
+    async editMap(mapId) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('shared_maps')
+                .select('*')
+                .eq('id', mapId)
+                .single();
+
+            if (error) throw error;
+
+            this.currentMapId = mapId;
+            this.currentMapMode = 'edit';
+            this.tempMapMetadata = {
+                title: data.title,
+                description: data.description,
+                isPublic: data.is_public
+            };
+
+            document.getElementById('viewMapTitle').textContent = data.title;
+            document.getElementById('viewMapOwner').textContent = 'Mode édition';
+            document.getElementById('viewMapReadOnly').style.display = 'none';
+            
+            this.viewSharedMapModal.style.display = 'flex';
+            this.initializeMapExcalidraw(data.excalidraw_data, false);
+
+            // Add update button
+            const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'save-whiteboard-btn';
+            saveBtn.textContent = '💾 Mettre à jour';
+            saveBtn.onclick = () => this.updateSharedMap();
+            header.insertBefore(saveBtn, header.firstChild);
+
+        } catch (error) {
+            console.error('Error loading map for edit:', error);
+            alert('Erreur lors du chargement du thought');
+        }
+    }
+
+    async updateSharedMap() {
+        try {
+            if (!this.tempMapData) {
+                alert('Aucune modification à sauvegarder');
+                return;
+            }
+
+            const { error } = await supabaseClient
+                .from('shared_maps')
+                .update({
+                    excalidraw_data: this.tempMapData,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', this.currentMapId);
+
+            if (error) throw error;
+
+            alert('✅ Thought mis à jour avec succès !');
+            this.closeViewSharedMap();
+            this.loadMyMaps();
+            
+        } catch (error) {
+            console.error('Error updating map:', error);
+            alert('Erreur lors de la mise à jour du thought');
+        }
+    }
+
+    async deleteMap(mapId) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer ce thought ?')) {
+            return;
+        }
+
+        try {
+            const { error } = await supabaseClient
+                .from('shared_maps')
+                .delete()
+                .eq('id', mapId);
+
+            if (error) throw error;
+
+            alert('✅ Thought supprimé');
+            this.loadMyMaps();
+            
+        } catch (error) {
+            console.error('Error deleting map:', error);
+            alert('Erreur lors de la suppression du thought');
+        }
+    }
+
+    shareMapLink(mapId) {
+        // Always use the current domain (works for localhost and production)
+        const baseUrl = window.location.origin;
+        const shareUrl = `${baseUrl}?thought=${mapId}`;
+        
+        // Copy to clipboard
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert('🔗 Lien copié dans le presse-papier !\n\n' + shareUrl);
+            }).catch(() => {
+                this.showShareModal(shareUrl);
+            });
+        } else {
+            this.showShareModal(shareUrl);
+        }
+    }
+
+    showShareModal(url) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>Partager ce thought</h2>
+                    <button class="close-btn" onclick="this.closest('.modal').remove()">×</button>
+                </div>
+                <div style="padding: 20px;">
+                    <p style="color: #888; margin-bottom: 15px;">Copiez ce lien pour partager :</p>
+                    <input type="text" value="${url}" readonly 
+                           style="width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #2a2a2a; 
+                                  border-radius: 8px; color: #fff; font-size: 14px;"
+                           onclick="this.select()">
+                    <button onclick="this.previousElementSibling.select(); document.execCommand('copy'); alert('Copié !');" 
+                            style="width: 100%; margin-top: 15px; padding: 12px; background: #4a9eff; 
+                                   color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        📋 Copier le lien
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    checkUrlForSharedMap() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const thoughtId = urlParams.get('thought');
+        
+        if (thoughtId) {
+            // Wait for user to be authenticated
+            const checkAuth = setInterval(() => {
+                if (this.user) {
+                    clearInterval(checkAuth);
+                    this.viewSharedMapFromUrl(parseInt(thoughtId));
+                }
+            }, 100);
+            
+            // Timeout after 5 seconds
+            setTimeout(() => clearInterval(checkAuth), 5000);
+        }
+    }
+
+    async viewSharedMapFromUrl(mapId) {
+        try {
+            // Increment view count
+            await supabaseClient.rpc('increment_map_view_count', { map_id: mapId });
+
+            // Load map data
+            const { data, error } = await supabaseClient
+                .from('shared_maps')
+                .select('*')
+                .eq('id', mapId)
+                .single();
+
+            if (error) throw error;
+
+            if (!data.is_public && data.owner_id !== this.user.id) {
+                alert('Ce thought est privé et vous n\'avez pas accès.');
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+
+            this.currentMapId = mapId;
+            this.currentMapMode = 'view';
+            
+            const isOwner = data.owner_id === this.user.id;
+            
+            document.getElementById('viewMapTitle').textContent = data.title;
+            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Independent Thought';
+            document.getElementById('viewMapReadOnly').style.display = isOwner ? 'none' : 'inline-block';
+            
+            this.viewSharedMapModal.style.display = 'flex';
+            
+            // Initialize Excalidraw with map data
+            this.initializeMapExcalidraw(data.excalidraw_data, !isOwner);
+            
+            // Clean URL after opening
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+        } catch (error) {
+            console.error('Error viewing map from URL:', error);
+            alert('Erreur lors du chargement du thought. Il n\'existe peut-être plus.');
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 

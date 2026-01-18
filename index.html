@@ -216,6 +216,78 @@
         </div>
     </div>
 
+    <!-- Shared Maps Modal -->
+    <div id="sharedMapsModal" class="modal" style="display: none;">
+        <div class="modal-content shared-maps-content">
+            <div class="modal-header">
+                <h2>🗺️ Independent Thinking</h2>
+                <button class="close-btn" onclick="skillsTracker.closeSharedMapsModal()">×</button>
+            </div>
+            
+            <div class="shared-maps-tabs">
+                <button class="tab-btn active" onclick="skillsTracker.switchMapsTab('browse')">📚 Parcourir</button>
+                <button class="tab-btn" onclick="skillsTracker.switchMapsTab('my-maps')">📝 Mes Thoughts</button>
+            </div>
+
+            <div id="browseMapsTab" class="maps-tab-content">
+                <div class="maps-grid" id="sharedMapsGrid">
+                    <!-- Shared maps will be populated here -->
+                </div>
+            </div>
+
+            <div id="myMapsTab" class="maps-tab-content" style="display: none;">
+                <button class="create-map-btn" onclick="skillsTracker.openCreateMapModal()">+ Créer un nouveau Thought</button>
+                <div class="maps-grid" id="myMapsGrid">
+                    <!-- User's maps will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Map Modal -->
+    <div id="createMapModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="createMapTitle">Créer un Independent Thought</h2>
+                <button class="close-btn" onclick="skillsTracker.closeCreateMapModal()">×</button>
+            </div>
+            
+            <div class="map-form">
+                <input type="text" id="mapTitle" placeholder="Titre du thought..." maxlength="200" required>
+                <textarea id="mapDescription" placeholder="Description (optionnelle)..." maxlength="500" rows="3"></textarea>
+                
+                <div class="map-visibility">
+                    <label>
+                        <input type="checkbox" id="mapIsPublic" checked>
+                        Rendre ce thought public (visible par tous)
+                    </label>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="skillsTracker.closeCreateMapModal()">Annuler</button>
+                    <button id="saveMapMetaBtn" class="primary-btn">Continuer vers l'éditeur</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Shared Map Modal -->
+    <div id="viewSharedMapModal" class="modal whiteboard-modal" style="display: none;">
+        <div class="whiteboard-container">
+            <div class="whiteboard-header">
+                <div class="map-info">
+                    <h2 id="viewMapTitle">Independent Thought</h2>
+                    <p id="viewMapOwner" class="map-owner"></p>
+                </div>
+                <div class="whiteboard-actions">
+                    <span id="viewMapReadOnly" class="read-only-badge">👁️ Lecture seule</span>
+                    <button class="close-btn" onclick="skillsTracker.closeViewSharedMap()">×</button>
+                </div>
+            </div>
+            <div id="viewExcalidrawContainer" class="excalidraw-wrapper"></div>
+        </div>
+    </div>
+
     <!-- Whiteboard Modal -->
     <div id="whiteboardModal" class="modal whiteboard-modal" style="display: none;">
         <div class="whiteboard-container">
@@ -258,6 +330,7 @@
                         <span class="menu-icon">⋯</span>
                     </button>
                     <div class="user-menu" id="userMenu" style="display: none;">
+                        <button id="sharedMapsBtn" class="menu-item">🧠 Independent Thinking</button>
                         <button id="archiveBtn" class="menu-item">Archive</button>
                         <button id="logoutBtn" class="menu-item">Déconnexion</button>
                     </div>
