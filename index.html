@@ -216,33 +216,7 @@
         </div>
     </div>
 
-    <!-- Shared Maps Modal -->
-    <div id="sharedMapsModal" class="modal" style="display: none;">
-        <div class="modal-content shared-maps-content">
-            <div class="modal-header">
-                <h2>🗺️ Independent Thinking</h2>
-                <button class="close-btn" onclick="skillsTracker.closeSharedMapsModal()">×</button>
-            </div>
-            
-            <div class="shared-maps-tabs">
-                <button class="tab-btn active" onclick="skillsTracker.switchMapsTab('browse')">📚 Parcourir</button>
-                <button class="tab-btn" onclick="skillsTracker.switchMapsTab('my-maps')">📝 Mes Thoughts</button>
-            </div>
-
-            <div id="browseMapsTab" class="maps-tab-content">
-                <div class="maps-grid" id="sharedMapsGrid">
-                    <!-- Shared maps will be populated here -->
-                </div>
-            </div>
-
-            <div id="myMapsTab" class="maps-tab-content" style="display: none;">
-                <button class="create-map-btn" onclick="skillsTracker.openCreateMapModal()">+ Créer un nouveau Thought</button>
-                <div class="maps-grid" id="myMapsGrid">
-                    <!-- User's maps will be populated here -->
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Shared Maps Modal is now integrated into main layout -->
 
     <!-- Create/Edit Map Modal -->
     <div id="createMapModal" class="modal" style="display: none;">
@@ -330,7 +304,6 @@
                         <span class="menu-icon">⋯</span>
                     </button>
                     <div class="user-menu" id="userMenu" style="display: none;">
-                        <button id="sharedMapsBtn" class="menu-item">🧠 Independent Thinking</button>
                         <button id="archiveBtn" class="menu-item">Archive</button>
                         <button id="logoutBtn" class="menu-item">Déconnexion</button>
                     </div>
@@ -338,12 +311,48 @@
             </div>
         </div>
 
-        <div class="header-actions">
-            <button id="addGoalBtn" class="add-goal-btn">+ Nouvel objectif</button>
+        <!-- Main Navigation Tabs -->
+        <div class="main-navigation">
+            <button class="nav-tab active" id="personalSpaceTab" onclick="skillsTracker.switchMainSpace('personal')">
+                Personal Space
+            </button>
+            <button class="nav-tab" id="publicSpaceTab" onclick="skillsTracker.switchMainSpace('public')">
+                Independent Thinking
+            </button>
         </div>
 
-        <div class="skills-container" id="skillsContainer">
-            <!-- Skills will be dynamically added here -->
+        <!-- Personal Space -->
+        <div id="personalSpace" class="main-space">
+            <div class="header-actions">
+                <button id="addGoalBtn" class="add-goal-btn">+</button>
+            </div>
+
+            <div class="skills-container" id="skillsContainer">
+                <!-- Skills will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Public Space (Independent Thinking) -->
+        <div id="publicSpace" class="main-space" style="display: none;">
+            <div class="public-space-header">
+                <div class="shared-maps-tabs">
+                    <button class="tab-btn active" onclick="skillsTracker.switchMapsTab('browse')">Parcourir</button>
+                    <button class="tab-btn" onclick="skillsTracker.switchMapsTab('my-maps')">Mes Thoughts</button>
+                </div>
+            </div>
+
+            <div id="browseMapsTab" class="maps-tab-content">
+                <div class="maps-grid" id="sharedMapsGrid">
+                    <!-- Shared maps will be populated here -->
+                </div>
+            </div>
+
+            <div id="myMapsTab" class="maps-tab-content" style="display: none;">
+                <button class="create-map-btn" onclick="skillsTracker.openCreateMapModal()">+</button>
+                <div class="maps-grid" id="myMapsGrid">
+                    <!-- User's maps will be populated here -->
+                </div>
+            </div>
         </div>
     </div>
 

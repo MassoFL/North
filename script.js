@@ -128,14 +128,15 @@ class SkillsTracker {
         this.skillType.addEventListener('change', () => this.handleSkillTypeChange());
         this.addMilestoneBtn.addEventListener('click', () => this.addMilestoneInput());
         
-        // Shared Maps
-        this.sharedMapsBtn = document.getElementById('sharedMapsBtn');
-        this.sharedMapsModal = document.getElementById('sharedMapsModal');
+        // Shared Maps (now integrated in main layout)
         this.createMapModal = document.getElementById('createMapModal');
         this.viewSharedMapModal = document.getElementById('viewSharedMapModal');
         this.saveMapMetaBtn = document.getElementById('saveMapMetaBtn');
+        this.personalSpaceTab = document.getElementById('personalSpaceTab');
+        this.publicSpaceTab = document.getElementById('publicSpaceTab');
+        this.personalSpace = document.getElementById('personalSpace');
+        this.publicSpace = document.getElementById('publicSpace');
         
-        this.sharedMapsBtn.addEventListener('click', () => this.openSharedMapsModal());
         this.saveMapMetaBtn.addEventListener('click', () => this.saveMapMetadata());
         
         // Add goal modal
@@ -1852,16 +1853,38 @@ class SkillsTracker {
         }
     }
 
+    // ===== MAIN SPACE NAVIGATION =====
+
+    switchMainSpace(space) {
+        // Update tab states
+        this.personalSpaceTab.classList.remove('active');
+        this.publicSpaceTab.classList.remove('active');
+        
+        if (space === 'personal') {
+            this.personalSpaceTab.classList.add('active');
+            this.personalSpace.style.display = 'block';
+            this.publicSpace.style.display = 'none';
+        } else if (space === 'public') {
+            this.publicSpaceTab.classList.add('active');
+            this.personalSpace.style.display = 'none';
+            this.publicSpace.style.display = 'block';
+            // Load maps when switching to public space
+            this.switchMapsTab('browse');
+        }
+    }
+
     // ===== SHARED MAPS FUNCTIONS =====
 
     async openSharedMapsModal() {
-        this.sharedMapsModal.style.display = 'flex';
-        this.switchMapsTab('browse');
-        await this.loadSharedMaps();
+        // This function is now replaced by switchMainSpace('public')
+        // Keeping for backward compatibility
+        this.switchMainSpace('public');
     }
 
     closeSharedMapsModal() {
-        this.sharedMapsModal.style.display = 'none';
+        // This function is now replaced by switchMainSpace('personal')
+        // Keeping for backward compatibility
+        this.switchMainSpace('personal');
     }
 
     switchMapsTab(tab) {
@@ -1961,7 +1984,7 @@ class SkillsTracker {
         }
 
         grid.innerHTML = maps.map(map => `
-            <div class="map-card">
+            <div class="map-card" onclick="skillsTracker.viewSharedMap(${map.id})">
                 <div class="map-card-header">
                     <h3 class="map-card-title">${this.escapeHtml(map.title)}</h3>
                     <div class="map-card-actions">
@@ -2015,6 +2038,7 @@ class SkillsTracker {
 
     openMapEditor() {
         this.currentMapMode = 'edit';
+        this.tempMapData = null; // Reset temp data for new map
         this.viewSharedMapModal.style.display = 'flex';
         document.getElementById('viewMapTitle').textContent = this.tempMapMetadata.title;
         document.getElementById('viewMapOwner').textContent = 'Nouvelle map';
@@ -2092,6 +2116,18 @@ class SkillsTracker {
             }
             header.appendChild(closeBtn);
             
+            // Add edit button if owner
+            if (isOwner) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'save-whiteboard-btn';
+                editBtn.textContent = '✏️ Modifier';
+                editBtn.onclick = () => {
+                    this.closeViewSharedMap();
+                    this.editMap(mapId);
+                };
+                header.insertBefore(editBtn, closeBtn);
+            }
+            
             // Add share button if public
             if (data.is_public) {
                 const shareBtn = document.createElement('button');
@@ -2101,8 +2137,8 @@ class SkillsTracker {
                 header.insertBefore(shareBtn, closeBtn);
             }
             
-            // Initialize Excalidraw with map data
-            this.initializeMapExcalidraw(data.excalidraw_data, !isOwner);
+            // Initialize Excalidraw with map data in read-only mode
+            this.initializeMapExcalidraw(data.excalidraw_data, true);
             
         } catch (error) {
             console.error('Error viewing map:', error);
@@ -2115,6 +2151,11 @@ class SkillsTracker {
         if (this.viewExcalidrawAPI) {
             this.viewExcalidrawAPI = null;
         }
+        // Reset temp data
+        this.tempMapData = null;
+        this.currentMapId = null;
+        this.currentMapMode = 'view';
+        
         // Clear the container
         document.getElementById('viewExcalidrawContainer').innerHTML = '';
         
@@ -2134,48 +2175,139 @@ class SkillsTracker {
         const container = document.getElementById('viewExcalidrawContainer');
         container.innerHTML = '';
 
-        // Check if Excalidraw is available
-        const ExcalidrawComponent = window.ExcalidrawLib?.Excalidraw || window.Excalidraw;
-        
-        if (!ExcalidrawComponent) {
-            container.innerHTML = '<div style="color: white; padding: 20px;">Erreur: Excalidraw non chargé. Rechargez la page.</div>';
+        const excalidrawElement = document.createElement('div');
+        excalidrawElement.style.height = '100%';
+        excalidrawElement.style.width = '100%';
+        container.appendChild(excalidrawElement);
+
+        // Vérifications des dépendances
+        if (!window.React) {
+            alert('Erreur: React n\'est pas chargé. Rechargez la page.');
             return;
         }
 
-        const excalidrawElement = React.createElement(ExcalidrawComponent, {
-            initialData: initialData || { elements: [], appState: {} },
-            viewModeEnabled: readOnly,
-            zenModeEnabled: false,
-            gridModeEnabled: false,
-            theme: 'light',
-            onChange: (elements, appState, files) => {
+        if (!window.ReactDOM) {
+            alert('Erreur: ReactDOM n\'est pas chargé. Rechargez la page.');
+            return;
+        }
+
+        // Try different ways to access Excalidraw
+        let Excalidraw = null;
+        
+        if (window.ExcalidrawLib && window.ExcalidrawLib.Excalidraw) {
+            console.log('✅ Found Excalidraw in ExcalidrawLib');
+            Excalidraw = window.ExcalidrawLib.Excalidraw;
+        } else if (window.Excalidraw) {
+            console.log('✅ Found Excalidraw as global');
+            Excalidraw = window.Excalidraw;
+        } else if (window.ExcalidrawLib) {
+            console.log('ExcalidrawLib available but no Excalidraw component');
+            console.log('ExcalidrawLib contents:', Object.keys(window.ExcalidrawLib));
+            
+            // Try to find Excalidraw in any property
+            for (const key of Object.keys(window.ExcalidrawLib)) {
+                if (typeof window.ExcalidrawLib[key] === 'function' || 
+                    (typeof window.ExcalidrawLib[key] === 'object' && window.ExcalidrawLib[key].$typeof)) {
+                    console.log('Trying Excalidraw from key:', key);
+                    Excalidraw = window.ExcalidrawLib[key];
+                    break;
+                }
+            }
+        }
+        
+        if (!Excalidraw) {
+            alert('Erreur: Le composant Excalidraw n\'est pas disponible. Rechargez la page.');
+            return;
+        }
+        
+        const excalidrawData = initialData ? {
+            elements: Array.isArray(initialData.elements) ? initialData.elements : [],
+            appState: {},  // Always use empty appState to avoid compatibility issues
+            files: initialData.files || {}
+        } : {
+            elements: [],
+            appState: {},
+            files: {}
+        };
+
+        console.log('🎨 Initializing map Excalidraw with data:', excalidrawData);
+        console.log('Elements is array:', Array.isArray(excalidrawData.elements));
+        console.log('Elements content:', JSON.stringify(excalidrawData.elements));
+        console.log('Files type:', typeof excalidrawData.files);
+        console.log('Files content:', JSON.stringify(excalidrawData.files));
+        console.log('AppState:', JSON.stringify(excalidrawData.appState));
+        console.log('Read-only mode:', readOnly);
+
+        try {
+            const excalidrawProps = {
+                initialData: excalidrawData
+            };
+            
+            // Only add viewModeEnabled if readOnly
+            if (readOnly) {
+                excalidrawProps.viewModeEnabled = true;
+            }
+
+            // onChange callback
+            excalidrawProps.onChange = (elements, appState, files) => {
                 if (!readOnly) {
+                    console.log('📝 Map onChange called');
+                    console.log('Elements type:', typeof elements, 'Is array:', Array.isArray(elements));
+                    console.log('Elements count:', Array.isArray(elements) ? elements.length : 'N/A');
+                    
                     // Store the data whenever it changes
                     this.tempMapData = { 
-                        elements: elements,
-                        appState: appState,
-                        files: files 
+                        elements: Array.isArray(elements) ? elements : [],
+                        appState: appState || {},
+                        files: files || {}
                     };
                 }
-            },
-            ref: (api) => {
-                this.viewExcalidrawAPI = api;
-            }
-        });
+            };
 
-        ReactDOM.render(excalidrawElement, container);
+            // Multiple API detection methods for compatibility
+            excalidrawProps.excalidrawAPI = (api) => {
+                console.log('✅ Map Excalidraw API received via excalidrawAPI');
+                this.viewExcalidrawAPI = api;
+            };
+
+            excalidrawProps.ref = (api) => {
+                console.log('✅ Map Excalidraw API received via ref');
+                this.viewExcalidrawAPI = api;
+            };
+
+            excalidrawProps.onPointerUpdate = (payload) => {
+                if (payload && payload.excalidrawAPI && !this.viewExcalidrawAPI) {
+                    console.log('✅ Map Excalidraw API received via onPointerUpdate');
+                    this.viewExcalidrawAPI = payload.excalidrawAPI;
+                }
+            };
+
+            const excalidrawComponent = React.createElement(Excalidraw, excalidrawProps);
+            ReactDOM.render(excalidrawComponent, excalidrawElement);
+            
+            console.log('✅ Map Excalidraw rendered successfully');
+        } catch (error) {
+            console.error('❌ Error rendering map Excalidraw:', error);
+            alert('Erreur lors de l\'initialisation d\'Excalidraw: ' + error.message);
+        }
     }
 
     async saveSharedMap() {
         try {
+            console.log('💾 Saving shared map...');
+            console.log('tempMapData:', this.tempMapData);
+            console.log('viewExcalidrawAPI:', this.viewExcalidrawAPI);
+            
             // Get current data from Excalidraw API if tempMapData is not set
             let dataToSave = this.tempMapData;
             
             if (!dataToSave && this.viewExcalidrawAPI) {
+                console.log('Getting data from API...');
                 const elements = this.viewExcalidrawAPI.getSceneElements();
                 const appState = this.viewExcalidrawAPI.getAppState();
                 const files = this.viewExcalidrawAPI.getFiles();
                 dataToSave = { elements, appState, files };
+                console.log('Data from API:', dataToSave);
             }
             
             if (!dataToSave || !dataToSave.elements || dataToSave.elements.length === 0) {
@@ -2183,11 +2315,25 @@ class SkillsTracker {
                 return;
             }
 
+            // Clean appState - only keep essential properties
+            const cleanAppState = {
+                viewBackgroundColor: dataToSave.appState?.viewBackgroundColor || '#ffffff',
+                gridSize: dataToSave.appState?.gridSize || null
+            };
+
+            const cleanData = {
+                elements: dataToSave.elements,
+                appState: cleanAppState,
+                files: dataToSave.files || {}
+            };
+
+            console.log('Saving to database:', cleanData);
+
             const mapData = {
                 title: this.tempMapMetadata.title,
                 description: this.tempMapMetadata.description,
                 is_public: this.tempMapMetadata.isPublic,
-                excalidraw_data: dataToSave,
+                excalidraw_data: cleanData,
                 owner_id: this.user.id
             };
 
@@ -2199,13 +2345,14 @@ class SkillsTracker {
 
             if (error) throw error;
 
+            console.log('✅ Saved successfully:', data);
             alert('✅ Thought sauvegardé avec succès !');
             this.closeViewSharedMap();
             this.switchMapsTab('my-maps');
             
         } catch (error) {
             console.error('Error saving map:', error);
-            alert('Erreur lors de la sauvegarde du thought');
+            alert('Erreur lors de la sauvegarde du thought: ' + error.message);
         }
     }
 
@@ -2228,6 +2375,7 @@ class SkillsTracker {
 
             this.currentMapId = mapId;
             this.currentMapMode = 'edit';
+            this.tempMapData = null; // Reset temp data
             this.tempMapMetadata = {
                 title: data.title,
                 description: data.description,
@@ -2275,14 +2423,21 @@ class SkillsTracker {
 
     async updateSharedMap() {
         try {
+            console.log('💾 Updating shared map...');
+            console.log('currentMapId:', this.currentMapId);
+            console.log('tempMapData:', this.tempMapData);
+            console.log('viewExcalidrawAPI:', this.viewExcalidrawAPI);
+            
             // Get current data from Excalidraw API if tempMapData is not set
             let dataToSave = this.tempMapData;
             
             if (!dataToSave && this.viewExcalidrawAPI) {
+                console.log('Getting data from API...');
                 const elements = this.viewExcalidrawAPI.getSceneElements();
                 const appState = this.viewExcalidrawAPI.getAppState();
                 const files = this.viewExcalidrawAPI.getFiles();
                 dataToSave = { elements, appState, files };
+                console.log('Data from API:', dataToSave);
             }
             
             if (!dataToSave) {
@@ -2290,23 +2445,38 @@ class SkillsTracker {
                 return;
             }
 
+            // Clean appState - only keep essential properties
+            const cleanAppState = {
+                viewBackgroundColor: dataToSave.appState?.viewBackgroundColor || '#ffffff',
+                gridSize: dataToSave.appState?.gridSize || null
+            };
+
+            const cleanData = {
+                elements: dataToSave.elements,
+                appState: cleanAppState,
+                files: dataToSave.files || {}
+            };
+
+            console.log('Updating database with:', cleanData);
+
             const { error } = await supabaseClient
                 .from('shared_maps')
                 .update({
-                    excalidraw_data: dataToSave,
+                    excalidraw_data: cleanData,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', this.currentMapId);
 
             if (error) throw error;
 
+            console.log('✅ Updated successfully');
             alert('✅ Thought mis à jour avec succès !');
             this.closeViewSharedMap();
             this.loadMyMaps();
             
         } catch (error) {
             console.error('Error updating map:', error);
-            alert('Erreur lors de la mise à jour du thought');
+            alert('Erreur lors de la mise à jour du thought: ' + error.message);
         }
     }
 
