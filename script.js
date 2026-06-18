@@ -2015,6 +2015,7 @@ class SkillsTracker {
                 <div class="map-card-header">
                     <h3 class="map-card-title">${this.escapeHtml(map.title)}</h3>
                     <div class="map-card-actions">
+                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.toggleMapVisibility(${map.id}, ${map.is_public})" title="${map.is_public ? 'Rendre privé' : 'Rendre public'}">${map.is_public ? '🔒' : '🌍'}</button>
                         <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.shareMapLink(${map.id})" title="Partager le lien">🔗</button>
                         <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.editMap(${map.id})" title="Modifier">✏️</button>
                         <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.deleteMap(${map.id})" title="Supprimer">🗑️</button>
@@ -2526,6 +2527,30 @@ class SkillsTracker {
         } catch (error) {
             console.error('Error deleting map:', error);
             alert('Erreur lors de la suppression du thought');
+        }
+    }
+
+    async toggleMapVisibility(mapId, currentIsPublic) {
+        const newIsPublic = !currentIsPublic;
+        const actionLabel = newIsPublic ? 'rendre ce thought public (visible par tous)' : 'rendre ce thought privé';
+        if (!confirm(`Voulez-vous ${actionLabel} ?`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabaseClient
+                .from('shared_maps')
+                .update({ is_public: newIsPublic, updated_at: new Date().toISOString() })
+                .eq('id', mapId);
+
+            if (error) throw error;
+
+            alert(newIsPublic ? '🌍 Thought rendu public' : '🔒 Thought rendu privé');
+            this.loadMyMaps();
+
+        } catch (error) {
+            console.error('Error updating map visibility:', error);
+            alert('Erreur lors du changement de visibilité du thought: ' + error.message);
         }
     }
 
