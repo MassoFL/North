@@ -1973,7 +1973,7 @@ class SkillsTracker {
             grid.innerHTML = `
                 <div class="empty-maps-message">
                     <h3>Aucun thought partagé pour le moment</h3>
-                    <p>Soyez le premier à créer un Independent Thought !</p>
+                    <p>Soyez le premier à créer un Thought !</p>
                 </div>
             `;
             return;
@@ -1987,7 +1987,7 @@ class SkillsTracker {
                 </div>
                 ${map.description ? `<p class="map-card-description">${this.escapeHtml(map.description)}</p>` : ''}
                 <div class="map-card-footer">
-                    <span class="map-owner">Independent Thought</span>
+                    <span class="map-owner">Thought</span>
                     <div class="map-stats">
                         <span class="map-stat">👁️ ${map.view_count || 0}</span>
                         <span class="map-stat">📅 ${new Date(map.created_at).toLocaleDateString()}</span>
@@ -2004,7 +2004,7 @@ class SkillsTracker {
             grid.innerHTML = `
                 <div class="empty-maps-message">
                     <h3>Vous n'avez pas encore de thoughts</h3>
-                    <p>Créez votre premier Independent Thought !</p>
+                    <p>Créez votre premier Thought !</p>
                 </div>
             `;
             return;
@@ -2035,7 +2035,7 @@ class SkillsTracker {
 
     openCreateMapModal() {
         this.currentMapId = null;
-        document.getElementById('createMapTitle').textContent = 'Créer un Independent Thought';
+        document.getElementById('createMapTitle').textContent = 'Créer un Thought';
         document.getElementById('mapTitle').value = '';
         document.getElementById('mapDescription').value = '';
         document.getElementById('mapIsPublic').checked = true;
@@ -2121,7 +2121,7 @@ class SkillsTracker {
             const isOwner = data.owner_id === this.user.id;
             
             document.getElementById('viewMapTitle').textContent = data.title;
-            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Independent Thought';
+            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Thought';
             
             const readOnlyBadge = document.getElementById('viewMapReadOnly');
             if (readOnlyBadge) {
@@ -2650,7 +2650,7 @@ class SkillsTracker {
             this.authModal.style.display = 'none';
             
             document.getElementById('viewMapTitle').textContent = data.title;
-            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Independent Thought';
+            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Thought';
             
             const readOnlyBadge = document.getElementById('viewMapReadOnly');
             if (readOnlyBadge) {
