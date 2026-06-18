@@ -190,6 +190,25 @@
         </div>
     </div>
 
+    <!-- Add Hypothesis Modal -->
+    <div id="addHypothesisModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouvelle hypothèse</h2>
+                <button class="close-btn" onclick="skillsTracker.closeAddHypothesisModal()">×</button>
+            </div>
+
+            <div class="skill-form">
+                <textarea id="hypothesisInput" placeholder="Énoncez votre hypothèse..." maxlength="500" rows="4"></textarea>
+
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="skillsTracker.closeAddHypothesisModal()">Annuler</button>
+                    <button id="saveHypothesisBtn" class="primary-btn">Créer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Archive Modal -->
     <div id="archiveModal" class="modal" style="display: none;">
         <div class="modal-content">
@@ -319,6 +338,9 @@
             <button class="nav-tab" id="publicSpaceTab" onclick="skillsTracker.switchMainSpace('public')">
                 Independent Thinking
             </button>
+            <button class="nav-tab" id="hyppoproofTab" onclick="skillsTracker.switchMainSpace('hyppoproof')">
+                Hyppoproof
+            </button>
         </div>
 
         <!-- Personal Space -->
@@ -352,6 +374,21 @@
                 <div class="maps-grid" id="myMapsGrid">
                     <!-- User's maps will be populated here -->
                 </div>
+            </div>
+        </div>
+
+        <!-- Hyppoproof Space -->
+        <div id="hyppoproofSpace" class="main-space" style="display: none;">
+            <div class="hyppoproof-header">
+                <div class="hyppoproof-intro">
+                    <h2>Hyppoproof</h2>
+                    <p>Posez une hypothèse, la communauté apporte les preuves.</p>
+                </div>
+                <button id="addHypothesisBtn" class="add-goal-btn">+ Nouvelle hypothèse</button>
+            </div>
+
+            <div class="hypotheses-container" id="hypothesesContainer">
+                <!-- Hypotheses will be populated here -->
             </div>
         </div>
     </div>

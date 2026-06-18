@@ -40,6 +40,7 @@ class SkillsTracker {
         this.excalidrawAPI = null;
         this.currentWhiteboardSkillId = null;
         this.sharedMaps = [];
+        this.hypotheses = [];
         this.currentMapId = null;
         this.currentMapMode = 'view'; // 'view' or 'edit'
         this.viewExcalidrawAPI = null;
@@ -136,6 +137,13 @@ class SkillsTracker {
         this.publicSpaceTab = document.getElementById('publicSpaceTab');
         this.personalSpace = document.getElementById('personalSpace');
         this.publicSpace = document.getElementById('publicSpace');
+
+        // Hyppoproof
+        this.hyppoproofTab = document.getElementById('hyppoproofTab');
+        this.hyppoproofSpace = document.getElementById('hyppoproofSpace');
+        this.hypothesesContainer = document.getElementById('hypothesesContainer');
+        this.addHypothesisModal = document.getElementById('addHypothesisModal');
+        this.hypothesisInput = document.getElementById('hypothesisInput');
         
         this.saveMapMetaBtn.addEventListener('click', () => this.saveMapMetadata());
         
@@ -143,6 +151,16 @@ class SkillsTracker {
         this.addGoalBtn = document.getElementById('addGoalBtn');
         this.addGoalModal = document.getElementById('addGoalModal');
         this.addGoalBtn.addEventListener('click', () => this.openAddGoalModal());
+
+        // Hyppoproof
+        this.addHypothesisBtn = document.getElementById('addHypothesisBtn');
+        if (this.addHypothesisBtn) {
+            this.addHypothesisBtn.addEventListener('click', () => this.openAddHypothesisModal());
+        }
+        const saveHypothesisBtn = document.getElementById('saveHypothesisBtn');
+        if (saveHypothesisBtn) {
+            saveHypothesisBtn.addEventListener('click', () => this.saveHypothesis());
+        }
         
         // Menu utilisateur
         this.menuToggle = document.getElementById('menuToggle');
@@ -1859,17 +1877,26 @@ class SkillsTracker {
         // Update tab states
         this.personalSpaceTab.classList.remove('active');
         this.publicSpaceTab.classList.remove('active');
-        
+        if (this.hyppoproofTab) this.hyppoproofTab.classList.remove('active');
+
+        // Hide all spaces
+        this.personalSpace.style.display = 'none';
+        this.publicSpace.style.display = 'none';
+        if (this.hyppoproofSpace) this.hyppoproofSpace.style.display = 'none';
+
         if (space === 'personal') {
             this.personalSpaceTab.classList.add('active');
             this.personalSpace.style.display = 'block';
-            this.publicSpace.style.display = 'none';
         } else if (space === 'public') {
             this.publicSpaceTab.classList.add('active');
-            this.personalSpace.style.display = 'none';
             this.publicSpace.style.display = 'block';
             // Load maps when switching to public space
             this.switchMapsTab('browse');
+        } else if (space === 'hyppoproof') {
+            this.hyppoproofTab.classList.add('active');
+            this.hyppoproofSpace.style.display = 'block';
+            // Load hypotheses when switching to hyppoproof space
+            this.loadHypotheses();
         }
     }
 
@@ -2652,6 +2679,228 @@ class SkillsTracker {
             console.error('Error viewing map from URL:', error);
             alert('Erreur lors du chargement du thought. Il n\'existe peut-être plus.');
             window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+
+    // ===== HYPPOPROOF FUNCTIONS =====
+
+    openAddHypothesisModal() {
+        this.hypothesisInput.value = '';
+        this.addHypothesisModal.style.display = 'flex';
+        setTimeout(() => this.hypothesisInput.focus(), 50);
+    }
+
+    closeAddHypothesisModal() {
+        this.addHypothesisModal.style.display = 'none';
+    }
+
+    async saveHypothesis() {
+        const content = this.hypothesisInput.value.trim();
+        if (!content) {
+            alert('Veuillez énoncer votre hypothèse');
+            return;
+        }
+
+        try {
+            const { error } = await supabaseClient
+                .from('hypotheses')
+                .insert([{ content, owner_id: this.user.id }]);
+
+            if (error) throw error;
+
+            this.closeAddHypothesisModal();
+            this.loadHypotheses();
+        } catch (error) {
+            console.error('Error saving hypothesis:', error);
+            alert('Erreur lors de la création de l\'hypothèse: ' + error.message);
+        }
+    }
+
+    async loadHypotheses() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('hypotheses')
+                .select('*, proofs(count)')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            this.hypotheses = data || [];
+            this.renderHypotheses();
+        } catch (error) {
+            console.error('Error loading hypotheses:', error);
+            alert('Erreur lors du chargement des hypothèses');
+        }
+    }
+
+    renderHypotheses() {
+        const container = this.hypothesesContainer;
+        if (!container) return;
+
+        if (!this.hypotheses || this.hypotheses.length === 0) {
+            container.innerHTML = `
+                <div class="empty-maps-message">
+                    <h3>Aucune hypothèse pour le moment</h3>
+                    <p>Soyez le premier à poser une hypothèse !</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = this.hypotheses.map(hyp => {
+            const count = (hyp.proofs && hyp.proofs[0] && hyp.proofs[0].count) || 0;
+            const isOwner = hyp.owner_id === this.user.id;
+            return `
+            <div class="hypothesis-card" id="hypothesis-${hyp.id}">
+                <div class="hypothesis-main" onclick="skillsTracker.toggleHypothesisProofs(${hyp.id})">
+                    <div class="hypothesis-content">
+                        <span class="hypothesis-icon">💡</span>
+                        <p class="hypothesis-text">${this.escapeHtml(hyp.content)}</p>
+                    </div>
+                    <div class="hypothesis-meta">
+                        <span class="proof-count">🔎 ${count}</span>
+                        ${isOwner ? `<button class="hypothesis-delete" onclick="event.stopPropagation(); skillsTracker.deleteHypothesis(${hyp.id})" title="Supprimer">🗑️</button>` : ''}
+                        <span class="expand-chevron">▾</span>
+                    </div>
+                </div>
+                <div class="proofs-panel" id="proofs-panel-${hyp.id}" style="display: none;">
+                    <div class="proofs-header">Preuves</div>
+                    <div class="proofs-list" id="proofs-list-${hyp.id}">
+                        <div class="proofs-empty">Chargement...</div>
+                    </div>
+                    <div class="add-proof">
+                        <textarea class="proof-input" id="proof-input-${hyp.id}" placeholder="Apportez une preuve..." maxlength="500" rows="2"></textarea>
+                        <button class="add-proof-btn" onclick="skillsTracker.addProof(${hyp.id})">Ajouter une preuve</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        }).join('');
+    }
+
+    toggleHypothesisProofs(id) {
+        const panel = document.getElementById(`proofs-panel-${id}`);
+        const card = document.getElementById(`hypothesis-${id}`);
+        if (!panel || !card) return;
+
+        const isOpen = panel.style.display !== 'none';
+        if (isOpen) {
+            panel.style.display = 'none';
+            card.classList.remove('expanded');
+        } else {
+            panel.style.display = 'block';
+            card.classList.add('expanded');
+            this.loadProofs(id);
+        }
+    }
+
+    async loadProofs(hypothesisId) {
+        const list = document.getElementById(`proofs-list-${hypothesisId}`);
+        try {
+            const { data, error } = await supabaseClient
+                .from('proofs')
+                .select('*')
+                .eq('hypothesis_id', hypothesisId)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+
+            this.renderProofs(hypothesisId, data || []);
+        } catch (error) {
+            console.error('Error loading proofs:', error);
+            if (list) list.innerHTML = `<div class="proofs-empty">Erreur de chargement des preuves</div>`;
+        }
+    }
+
+    renderProofs(hypothesisId, proofs) {
+        const list = document.getElementById(`proofs-list-${hypothesisId}`);
+        if (!list) return;
+
+        if (proofs.length === 0) {
+            list.innerHTML = `<div class="proofs-empty">Aucune preuve pour l'instant. Apportez la première !</div>`;
+            return;
+        }
+
+        list.innerHTML = proofs.map(proof => {
+            const isAuthor = proof.author_id === this.user.id;
+            return `
+            <div class="proof-item">
+                <p class="proof-text">${this.escapeHtml(proof.content)}</p>
+                <div class="proof-item-footer">
+                    <span class="proof-date">📅 ${new Date(proof.created_at).toLocaleDateString()}</span>
+                    ${isAuthor ? `<button class="proof-delete" onclick="skillsTracker.deleteProof(${proof.id}, ${hypothesisId})" title="Supprimer">🗑️</button>` : ''}
+                </div>
+            </div>
+        `;
+        }).join('');
+    }
+
+    async addProof(hypothesisId) {
+        const input = document.getElementById(`proof-input-${hypothesisId}`);
+        if (!input) return;
+        const content = input.value.trim();
+        if (!content) {
+            alert('Veuillez écrire votre preuve');
+            return;
+        }
+
+        try {
+            const { error } = await supabaseClient
+                .from('proofs')
+                .insert([{ hypothesis_id: hypothesisId, content, author_id: this.user.id }]);
+
+            if (error) throw error;
+
+            input.value = '';
+            await this.loadProofs(hypothesisId);
+            this.updateProofCount(hypothesisId);
+        } catch (error) {
+            console.error('Error adding proof:', error);
+            alert('Erreur lors de l\'ajout de la preuve: ' + error.message);
+        }
+    }
+
+    updateProofCount(hypothesisId) {
+        const list = document.getElementById(`proofs-list-${hypothesisId}`);
+        const card = document.getElementById(`hypothesis-${hypothesisId}`);
+        if (!list || !card) return;
+        const count = list.querySelectorAll('.proof-item').length;
+        const badge = card.querySelector('.proof-count');
+        if (badge) badge.textContent = `🔎 ${count}`;
+    }
+
+    async deleteHypothesis(id) {
+        if (!confirm('Supprimer cette hypothèse et toutes ses preuves ?')) return;
+        try {
+            const { error } = await supabaseClient
+                .from('hypotheses')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            this.loadHypotheses();
+        } catch (error) {
+            console.error('Error deleting hypothesis:', error);
+            alert('Erreur lors de la suppression: ' + error.message);
+        }
+    }
+
+    async deleteProof(proofId, hypothesisId) {
+        if (!confirm('Supprimer cette preuve ?')) return;
+        try {
+            const { error } = await supabaseClient
+                .from('proofs')
+                .delete()
+                .eq('id', proofId);
+
+            if (error) throw error;
+
+            await this.loadProofs(hypothesisId);
+            this.updateProofCount(hypothesisId);
+        } catch (error) {
+            console.error('Error deleting proof:', error);
+            alert('Erreur lors de la suppression: ' + error.message);
         }
     }
 
