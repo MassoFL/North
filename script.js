@@ -272,7 +272,7 @@ class SkillsTracker {
             message.className = 'auth-shared-message';
             message.style.cssText = 'background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #4a9eff;';
             message.innerHTML = `
-                <p style="color: #4a9eff; margin: 0 0 10px 0; font-weight: 600;">📖 Thought partagé</p>
+                <p style="color: #4a9eff; margin: 0 0 10px 0; font-weight: 600;">${icon('thoughts-prompt__shared-thought')} Thought partagé</p>
                 <p style="color: #888; margin: 0; font-size: 14px;">Connectez-vous ou créez un compte pour voir ce thought</p>
             `;
             this.authForm.parentElement.insertBefore(message, this.authForm);
@@ -882,7 +882,7 @@ class SkillsTracker {
                             draggable="false" 
                             onclick="skillsTracker.openWhiteboard(${skill.id})"
                             title="Tableau blanc">
-                        📋
+                        ${icon('personal-space__open-whiteboard')}
                     </button>
                     ${!isCompleted ? `
                         <div class="increment-controls">
@@ -1674,7 +1674,7 @@ class SkillsTracker {
         }
 
         saveBtn.classList.add('saving');
-        saveBtn.textContent = '💾 Sauvegarde...';
+        saveBtn.innerHTML = `${icon('whiteboard__save')} Sauvegarde...`;
 
         try {
             // Vérifier que les méthodes API existent
@@ -1753,7 +1753,7 @@ class SkillsTracker {
             saveBtn.textContent = '✓ Sauvegardé';
             setTimeout(() => {
                 saveBtn.classList.remove('saving');
-                saveBtn.textContent = '💾 Sauvegarder';
+                saveBtn.innerHTML = `${icon('whiteboard__save')} Sauvegarder`;
             }, 2000);
 
             // Rafraîchir l'affichage pour mettre à jour l'indicateur
@@ -1777,7 +1777,7 @@ class SkillsTracker {
             
             alert(errorMessage);
             saveBtn.classList.remove('saving');
-            saveBtn.textContent = '💾 Sauvegarder';
+            saveBtn.innerHTML = `${icon('whiteboard__save')} Sauvegarder`;
         }
     }
 
@@ -1983,14 +1983,14 @@ class SkillsTracker {
             <div class="map-card" onclick="skillsTracker.viewSharedMap(${map.id})">
                 <div class="map-card-header">
                     <h3 class="map-card-title">${this.escapeHtml(map.title)}</h3>
-                    <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.shareMapLink(${map.id})" title="Partager le lien">🔗</button>
+                    <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.shareMapLink(${map.id})" title="Partager le lien">${icon('thoughts-card__share-link')}</button>
                 </div>
                 ${map.description ? `<p class="map-card-description">${this.escapeHtml(map.description)}</p>` : ''}
                 <div class="map-card-footer">
                     <span class="map-owner">Thought</span>
                     <div class="map-stats">
-                        <span class="map-stat">👁️ ${map.view_count || 0}</span>
-                        <span class="map-stat">📅 ${new Date(map.created_at).toLocaleDateString()}</span>
+                        <span class="map-stat">${icon('thoughts-card__view-count')} ${map.view_count || 0}</span>
+                        <span class="map-stat">${icon('thoughts-card__date')} ${new Date(map.created_at).toLocaleDateString()}</span>
                     </div>
                 </div>
             </div>
@@ -2015,18 +2015,18 @@ class SkillsTracker {
                 <div class="map-card-header">
                     <h3 class="map-card-title">${this.escapeHtml(map.title)}</h3>
                     <div class="map-card-actions">
-                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.toggleMapVisibility(${map.id}, ${map.is_public})" title="${map.is_public ? 'Rendre privé' : 'Rendre public'}">${map.is_public ? '🔒' : '🌍'}</button>
-                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.shareMapLink(${map.id})" title="Partager le lien">🔗</button>
-                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.editMap(${map.id})" title="Modifier">✏️</button>
-                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.deleteMap(${map.id})" title="Supprimer">🗑️</button>
+                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.toggleMapVisibility(${map.id}, ${map.is_public})" title="${map.is_public ? 'Rendre privé' : 'Rendre public'}">${map.is_public ? icon('thoughts-card__make-private') : icon('thoughts-card__make-public')}</button>
+                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.shareMapLink(${map.id})" title="Partager le lien">${icon('thoughts-card__share-link')}</button>
+                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.editMap(${map.id})" title="Modifier">${icon('thoughts-card__edit')}</button>
+                        <button class="map-action-btn" onclick="event.stopPropagation(); skillsTracker.deleteMap(${map.id})" title="Supprimer">${icon('thoughts-card__delete')}</button>
                     </div>
                 </div>
                 ${map.description ? `<p class="map-card-description">${this.escapeHtml(map.description)}</p>` : ''}
                 <div class="map-card-footer">
-                    <span class="map-owner">${map.is_public ? '🌍 Public' : '🔒 Privé'}</span>
+                    <span class="map-owner">${map.is_public ? icon('thoughts-card__make-public') + ' Public' : icon('thoughts-card__make-private') + ' Privé'}</span>
                     <div class="map-stats">
-                        <span class="map-stat">👁️ ${map.view_count || 0}</span>
-                        <span class="map-stat">📅 ${new Date(map.created_at).toLocaleDateString()}</span>
+                        <span class="map-stat">${icon('thoughts-card__view-count')} ${map.view_count || 0}</span>
+                        <span class="map-stat">${icon('thoughts-card__date')} ${new Date(map.created_at).toLocaleDateString()}</span>
                     </div>
                 </div>
             </div>
@@ -2093,7 +2093,7 @@ class SkillsTracker {
         // Add save button for new map
         const saveBtn = document.createElement('button');
         saveBtn.className = 'save-whiteboard-btn';
-        saveBtn.textContent = '💾 Sauvegarder le thought';
+        saveBtn.innerHTML = `${icon('whiteboard__save')} Sauvegarder le thought`;
         saveBtn.onclick = () => this.saveSharedMap();
         header.insertBefore(saveBtn, closeBtn);
 
@@ -2148,7 +2148,7 @@ class SkillsTracker {
             if (isOwner) {
                 const editBtn = document.createElement('button');
                 editBtn.className = 'save-whiteboard-btn';
-                editBtn.textContent = '✏️ Modifier';
+                editBtn.innerHTML = `${icon('thoughts-card__edit')} Modifier`;
                 editBtn.onclick = () => {
                     this.closeViewSharedMap();
                     this.editMap(mapId);
@@ -2160,7 +2160,7 @@ class SkillsTracker {
             if (data.is_public) {
                 const shareBtn = document.createElement('button');
                 shareBtn.className = 'save-whiteboard-btn share-thought-btn';
-                shareBtn.textContent = '🔗 Partager';
+                shareBtn.innerHTML = `${icon('thoughts-card__share-link')} Partager`;
                 shareBtn.onclick = () => this.shareMapLink(mapId);
                 header.insertBefore(shareBtn, closeBtn);
             }
@@ -2437,7 +2437,7 @@ class SkillsTracker {
             // Add update button
             const saveBtn = document.createElement('button');
             saveBtn.className = 'save-whiteboard-btn';
-            saveBtn.textContent = '💾 Mettre à jour';
+            saveBtn.innerHTML = `${icon('whiteboard__save')} Mettre à jour`;
             saveBtn.onclick = () => this.updateSharedMap();
             header.insertBefore(saveBtn, closeBtn);
             
@@ -2590,7 +2590,7 @@ class SkillsTracker {
                     <button onclick="this.previousElementSibling.select(); document.execCommand('copy'); alert('Copié !');" 
                             style="width: 100%; margin-top: 15px; padding: 12px; background: #4a9eff; 
                                    color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        📋 Copier le lien
+                        ${icon('thoughts-share__copy-link')} Copier le lien
                     </button>
                 </div>
             </div>
@@ -2677,7 +2677,7 @@ class SkillsTracker {
             if (data.is_public) {
                 const shareBtn = document.createElement('button');
                 shareBtn.className = 'save-whiteboard-btn share-thought-btn';
-                shareBtn.textContent = '🔗 Partager';
+                shareBtn.innerHTML = `${icon('thoughts-card__share-link')} Partager`;
                 shareBtn.onclick = () => this.shareMapLink(mapId);
                 header.insertBefore(shareBtn, closeBtn);
             }
@@ -2686,7 +2686,7 @@ class SkillsTracker {
             if (!this.user) {
                 const loginBtn = document.createElement('button');
                 loginBtn.className = 'save-whiteboard-btn';
-                loginBtn.textContent = '🔐 Se connecter';
+                loginBtn.innerHTML = `${icon('auth__login')} Se connecter`;
                 loginBtn.onclick = () => {
                     this.closeViewSharedMap();
                     this.showAuth();
@@ -2779,12 +2779,12 @@ class SkillsTracker {
             <div class="hypothesis-card" id="hypothesis-${hyp.id}">
                 <div class="hypothesis-main" onclick="skillsTracker.toggleHypothesisProofs(${hyp.id})">
                     <div class="hypothesis-content">
-                        <span class="hypothesis-icon">💡</span>
+                        <span class="hypothesis-icon">${icon('hyppoproof-card__hypothesis')}</span>
                         <p class="hypothesis-text">${this.escapeHtml(hyp.content)}</p>
                     </div>
                     <div class="hypothesis-meta">
-                        <span class="proof-count">🔎 ${count}</span>
-                        ${isOwner ? `<button class="hypothesis-delete" onclick="event.stopPropagation(); skillsTracker.deleteHypothesis(${hyp.id})" title="Supprimer">🗑️</button>` : ''}
+                        <span class="proof-count">${icon('hyppoproof-card__proof-count')} ${count}</span>
+                        ${isOwner ? `<button class="hypothesis-delete" onclick="event.stopPropagation(); skillsTracker.deleteHypothesis(${hyp.id})" title="Supprimer">${icon('hyppoproof-card__delete-hypothesis')}</button>` : ''}
                         <span class="expand-chevron">▾</span>
                     </div>
                 </div>
@@ -2852,8 +2852,8 @@ class SkillsTracker {
             <div class="proof-item">
                 <p class="proof-text">${this.escapeHtml(proof.content)}</p>
                 <div class="proof-item-footer">
-                    <span class="proof-date">📅 ${new Date(proof.created_at).toLocaleDateString()}</span>
-                    ${isAuthor ? `<button class="proof-delete" onclick="skillsTracker.deleteProof(${proof.id}, ${hypothesisId})" title="Supprimer">🗑️</button>` : ''}
+                    <span class="proof-date">${icon('hyppoproof-proof__date')} ${new Date(proof.created_at).toLocaleDateString()}</span>
+                    ${isAuthor ? `<button class="proof-delete" onclick="skillsTracker.deleteProof(${proof.id}, ${hypothesisId})" title="Supprimer">${icon('hyppoproof-proof__delete-proof')}</button>` : ''}
                 </div>
             </div>
         `;
@@ -2891,7 +2891,7 @@ class SkillsTracker {
         if (!list || !card) return;
         const count = list.querySelectorAll('.proof-item').length;
         const badge = card.querySelector('.proof-count');
-        if (badge) badge.textContent = `🔎 ${count}`;
+        if (badge) badge.innerHTML = `${icon('hyppoproof-card__proof-count')} ${count}`;
     }
 
     async deleteHypothesis(id) {

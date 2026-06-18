@@ -100,7 +100,7 @@
     <div id="onboardingModal" class="modal" style="display: none;">
         <div class="onboarding-content">
             <div class="onboarding-step" id="step1">
-                <div class="onboarding-icon">🚀</div>
+                <div class="onboarding-icon" data-icon="onboarding-step1__welcome-rocket"></div>
                 <h2>Bienvenue dans votre parcours d'excellence</h2>
                 <p>La meilleure startup, c'est <strong>vous-même</strong>. Chaque compétence que vous développez est un
                     investissement qui rapporte toute votre vie.</p>
@@ -108,7 +108,7 @@
             </div>
 
             <div class="onboarding-step" id="step2" style="display: none;">
-                <div class="onboarding-icon">📚</div>
+                <div class="onboarding-icon" data-icon="onboarding-step2__learning-books"></div>
                 <h2>L'apprentissage n'a pas d'âge</h2>
                 <p>Que vous ayez 16 ou 60 ans, débutant ou expert, il y a toujours quelque chose de nouveau à apprendre.
                     Chaque heure compte.</p>
@@ -116,7 +116,7 @@
             </div>
 
             <div class="onboarding-step" id="step3" style="display: none;">
-                <div class="onboarding-icon">⚡</div>
+                <div class="onboarding-icon" data-icon="onboarding-step3__consistency-bolt"></div>
                 <h2>La consistance fait la différence</h2>
                 <p>1 heure par jour pendant un an = 365 heures de maîtrise. La régularité bat l'intensité sporadique à
                     tous les coups.</p>
@@ -124,7 +124,7 @@
             </div>
 
             <div class="onboarding-step" id="step4" style="display: none;">
-                <div class="onboarding-icon">🎯</div>
+                <div class="onboarding-icon" data-icon="onboarding-step4__how-it-works-target"></div>
                 <h2>Comment ça marche ?</h2>
                 <div class="onboarding-instructions">
                     <div class="instruction">
@@ -273,7 +273,7 @@
                     <p id="viewMapOwner" class="map-owner"></p>
                 </div>
                 <div class="whiteboard-actions">
-                    <span id="viewMapReadOnly" class="read-only-badge">👁️ Lecture seule</span>
+                    <span id="viewMapReadOnly" class="read-only-badge"><span class="ic" data-icon="thoughts-viewer__read-only-badge"></span> Lecture seule</span>
                     <button class="close-btn" onclick="skillsTracker.closeViewSharedMap()">×</button>
                 </div>
             </div>
@@ -287,7 +287,7 @@
             <div class="whiteboard-header">
                 <h2 id="whiteboardTitle">Tableau blanc</h2>
                 <div class="whiteboard-actions">
-                    <button class="save-whiteboard-btn" onclick="skillsTracker.saveWhiteboard()">💾 Sauvegarder</button>
+                    <button class="save-whiteboard-btn" onclick="skillsTracker.saveWhiteboard()"><span class="ic" data-icon="whiteboard__save"></span> Sauvegarder</button>
                     <button class="close-btn" onclick="skillsTracker.closeWhiteboard()">×</button>
                 </div>
             </div>
@@ -393,6 +393,7 @@
         </div>
     </div>
 
+    <script src="icons.js"></script>
     <script src="script.js"></script>
 </body>
 

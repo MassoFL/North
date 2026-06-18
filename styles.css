@@ -2182,3 +2182,52 @@ h1 {
         padding: 16px;
     }
 }
+
+/* ===== INLINE SVG ICONS (currentColor) ===== */
+svg.ic {
+    width: 1.05em;
+    height: 1.05em;
+    vertical-align: -0.15em;
+    flex-shrink: 0;
+}
+
+span.ic {
+    display: inline-block;
+    width: 1.05em;
+    height: 1.05em;
+    line-height: 0;
+    vertical-align: -0.15em;
+}
+span.ic > svg.ic {
+    width: 100%;
+    height: 100%;
+    vertical-align: 0;
+}
+
+/* Small gap between an inline icon and its adjacent text label */
+.map-stat svg.ic,
+.map-owner svg.ic,
+.proof-count svg.ic,
+.proof-date svg.ic {
+    margin-right: 3px;
+}
+
+/* Icon-only / labelled buttons */
+.map-action-btn svg.ic { width: 19px; height: 19px; vertical-align: middle; }
+.whiteboard-btn svg.ic { width: 16px; height: 16px; }
+.hypothesis-delete svg.ic,
+.proof-delete svg.ic { width: 16px; height: 16px; }
+
+/* Onboarding header icons (large) */
+.onboarding-icon {
+    color: #667eea;
+    line-height: 0;
+}
+.onboarding-icon svg.ic {
+    width: 56px;
+    height: 56px;
+}
+
+/* Hypothesis bulb keeps the accent colour */
+.hypothesis-icon { color: #667eea; line-height: 0; }
+.hypothesis-icon svg.ic { width: 22px; height: 22px; }
