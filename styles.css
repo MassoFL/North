@@ -1594,6 +1594,21 @@ h1 {
     margin-bottom: 30px;
 }
 
+.stories-intro {
+    margin-bottom: 20px;
+}
+.stories-intro h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #000;
+    margin: 0 0 4px 0;
+}
+.stories-intro p {
+    color: #666;
+    font-size: 14px;
+    margin: 0;
+}
+
 .shared-maps-tabs {
     display: flex;
     gap: 10px;

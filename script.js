@@ -279,8 +279,8 @@ class SkillsTracker {
             message.className = 'auth-shared-message';
             message.style.cssText = 'background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #4a9eff;';
             message.innerHTML = `
-                <p style="color: #4a9eff; margin: 0 0 10px 0; font-weight: 600;">${icon('thoughts-prompt__shared-thought')} Thought partagé</p>
-                <p style="color: #888; margin: 0; font-size: 14px;">Connectez-vous ou créez un compte pour voir ce thought</p>
+                <p style="color: #4a9eff; margin: 0 0 10px 0; font-weight: 600;">${icon('thoughts-prompt__shared-thought')} Story partagée</p>
+                <p style="color: #888; margin: 0; font-size: 14px;">Connectez-vous ou créez un compte pour voir cette story</p>
             `;
             this.authForm.parentElement.insertBefore(message, this.authForm);
         }
@@ -1952,7 +1952,7 @@ class SkillsTracker {
             this.renderSharedMaps();
         } catch (error) {
             console.error('Error loading shared maps:', error);
-            alert('Erreur lors du chargement des thoughts partagés');
+            alert('Erreur lors du chargement des stories partagées');
         }
     }
 
@@ -1969,7 +1969,7 @@ class SkillsTracker {
             this.renderMyMaps(data || []);
         } catch (error) {
             console.error('Error loading my maps:', error);
-            alert('Erreur lors du chargement de vos thoughts');
+            alert('Erreur lors du chargement de vos stories');
         }
     }
 
@@ -1979,8 +1979,8 @@ class SkillsTracker {
         if (this.sharedMaps.length === 0) {
             grid.innerHTML = `
                 <div class="empty-maps-message">
-                    <h3>Aucun thought partagé pour le moment</h3>
-                    <p>Soyez le premier à créer un Thought !</p>
+                    <h3>Aucune story partagée pour le moment</h3>
+                    <p>Soyez le premier à créer une Story !</p>
                 </div>
             `;
             return;
@@ -1994,7 +1994,7 @@ class SkillsTracker {
                 </div>
                 ${map.description ? `<p class="map-card-description">${this.escapeHtml(map.description)}</p>` : ''}
                 <div class="map-card-footer">
-                    <span class="map-owner">Thought</span>
+                    <span class="map-owner">Story</span>
                     <div class="map-stats">
                         <span class="map-stat">${icon('thoughts-card__view-count')} ${map.view_count || 0}</span>
                         <span class="map-stat">${icon('thoughts-card__date')} ${new Date(map.created_at).toLocaleDateString()}</span>
@@ -2010,8 +2010,8 @@ class SkillsTracker {
         if (maps.length === 0) {
             grid.innerHTML = `
                 <div class="empty-maps-message">
-                    <h3>Vous n'avez pas encore de thoughts</h3>
-                    <p>Créez votre premier Thought !</p>
+                    <h3>Vous n'avez pas encore de stories</h3>
+                    <p>Créez votre première Story !</p>
                 </div>
             `;
             return;
@@ -2042,7 +2042,7 @@ class SkillsTracker {
 
     openCreateMapModal() {
         this.currentMapId = null;
-        document.getElementById('createMapTitle').textContent = 'Créer un Thought';
+        document.getElementById('createMapTitle').textContent = 'Créer une Story';
         document.getElementById('mapTitle').value = '';
         document.getElementById('mapDescription').value = '';
         document.getElementById('mapIsPublic').checked = true;
@@ -2059,7 +2059,7 @@ class SkillsTracker {
         const isPublic = document.getElementById('mapIsPublic').checked;
 
         if (!title) {
-            alert('Veuillez entrer un titre pour le thought');
+            alert('Veuillez entrer un titre pour la story');
             return;
         }
 
@@ -2100,7 +2100,7 @@ class SkillsTracker {
         // Add save button for new map
         const saveBtn = document.createElement('button');
         saveBtn.className = 'save-whiteboard-btn';
-        saveBtn.innerHTML = `${icon('whiteboard__save')} Sauvegarder le thought`;
+        saveBtn.innerHTML = `${icon('whiteboard__save')} Sauvegarder la story`;
         saveBtn.onclick = () => this.saveSharedMap();
         header.insertBefore(saveBtn, closeBtn);
 
@@ -2134,7 +2134,7 @@ class SkillsTracker {
             }
 
             document.getElementById('viewMapTitle').textContent = data.title;
-            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Thought';
+            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre story' : 'Story';
             
             const readOnlyBadge = document.getElementById('viewMapReadOnly');
             if (readOnlyBadge) {
@@ -2183,7 +2183,7 @@ class SkillsTracker {
             
         } catch (error) {
             console.error('Error viewing map:', error);
-            alert('Erreur lors du chargement du thought');
+            alert('Erreur lors du chargement de la story');
         }
     }
 
@@ -2387,13 +2387,13 @@ class SkillsTracker {
             if (error) throw error;
 
             console.log('✅ Saved successfully:', data);
-            alert('✅ Thought sauvegardé avec succès !');
+            alert('✅ Story sauvegardée avec succès !');
             this.closeViewSharedMap();
             this.switchMapsTab('my-maps');
             
         } catch (error) {
             console.error('Error saving map:', error);
-            alert('Erreur lors de la sauvegarde du thought: ' + error.message);
+            alert('Erreur lors de la sauvegarde de la story: ' + error.message);
         }
     }
 
@@ -2437,7 +2437,7 @@ class SkillsTracker {
 
         } catch (error) {
             console.error('Error loading map for edit:', error);
-            alert('Erreur lors du chargement du thought');
+            alert('Erreur lors du chargement de la story');
         }
     }
 
@@ -2490,18 +2490,18 @@ class SkillsTracker {
             if (error) throw error;
 
             console.log('✅ Updated successfully');
-            alert('✅ Thought mis à jour avec succès !');
+            alert('✅ Story mise à jour avec succès !');
             this.closeViewSharedMap();
             this.loadMyMaps();
             
         } catch (error) {
             console.error('Error updating map:', error);
-            alert('Erreur lors de la mise à jour du thought: ' + error.message);
+            alert('Erreur lors de la mise à jour de la story: ' + error.message);
         }
     }
 
     async deleteMap(mapId) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer ce thought ?')) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer cette story ?')) {
             return;
         }
 
@@ -2513,18 +2513,18 @@ class SkillsTracker {
 
             if (error) throw error;
 
-            alert('✅ Thought supprimé');
+            alert('✅ Story supprimée');
             this.loadMyMaps();
             
         } catch (error) {
             console.error('Error deleting map:', error);
-            alert('Erreur lors de la suppression du thought');
+            alert('Erreur lors de la suppression de la story');
         }
     }
 
     async toggleMapVisibility(mapId, currentIsPublic) {
         const newIsPublic = !currentIsPublic;
-        const actionLabel = newIsPublic ? 'rendre ce thought public (visible par tous)' : 'rendre ce thought privé';
+        const actionLabel = newIsPublic ? 'rendre cette story publique (visible par tous)' : 'rendre cette story privée';
         if (!confirm(`Voulez-vous ${actionLabel} ?`)) {
             return;
         }
@@ -2537,12 +2537,12 @@ class SkillsTracker {
 
             if (error) throw error;
 
-            alert(newIsPublic ? '🌍 Thought rendu public' : '🔒 Thought rendu privé');
+            alert(newIsPublic ? '🌍 Story rendue publique' : '🔒 Story rendue privée');
             this.loadMyMaps();
 
         } catch (error) {
             console.error('Error updating map visibility:', error);
-            alert('Erreur lors du changement de visibilité du thought: ' + error.message);
+            alert('Erreur lors du changement de visibilité de la story: ' + error.message);
         }
     }
 
@@ -2570,7 +2570,7 @@ class SkillsTracker {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
-                    <h2>Partager ce thought</h2>
+                    <h2>Partager cette story</h2>
                     <button class="close-btn" onclick="this.closest('.modal').remove()">×</button>
                 </div>
                 <div style="padding: 20px;">
@@ -2623,7 +2623,7 @@ class SkillsTracker {
 
             // Check if map is public or user is owner
             if (!data.is_public && (!this.user || data.owner_id !== this.user.id)) {
-                alert('Ce thought est privé. Connectez-vous pour y accéder.');
+                alert('Cette story est privée. Connectez-vous pour y accéder.');
                 window.history.replaceState({}, document.title, window.location.pathname);
                 return;
             }
@@ -2649,7 +2649,7 @@ class SkillsTracker {
             }
 
             document.getElementById('viewMapTitle').textContent = data.title;
-            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Thought';
+            document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre story' : 'Story';
             
             const readOnlyBadge = document.getElementById('viewMapReadOnly');
             if (readOnlyBadge) {
@@ -2701,7 +2701,7 @@ class SkillsTracker {
             
         } catch (error) {
             console.error('Error viewing map from URL:', error);
-            alert('Erreur lors du chargement du thought. Il n\'existe peut-être plus.');
+            alert('Erreur lors du chargement de la story. Elle n\'existe peut-être plus.');
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }
@@ -2941,7 +2941,7 @@ class SkillsTracker {
         modal.style.zIndex = '4000';
         modal.style.display = 'flex';
         document.getElementById('viewMapTitle').textContent = 'Tableau blanc';
-        document.getElementById('viewMapOwner').textContent = 'Bloc de votre Thought';
+        document.getElementById('viewMapOwner').textContent = 'Bloc de votre Story';
         const readOnlyBadge = document.getElementById('viewMapReadOnly');
         if (readOnlyBadge) readOnlyBadge.style.display = 'none';
 
@@ -3084,7 +3084,7 @@ class SkillsTracker {
             this.editorBlocks = [];
             this.editorMeta = null;
             this.editorThoughtId = null;
-            alert('✅ Thought publié !');
+            alert('✅ Story publiée !');
             this.switchMainSpace('public');
             this.switchMapsTab('my-maps');
         } catch (e) {
@@ -3097,8 +3097,8 @@ class SkillsTracker {
 
     openThoughtViewer(thought, isOwner) {
         const blocks = Array.isArray(thought.blocks) ? thought.blocks : [];
-        document.getElementById('thoughtViewerTitle').textContent = thought.title || 'Thought';
-        document.getElementById('thoughtViewerOwner').textContent = isOwner ? 'Votre Thought' : 'Thought';
+        document.getElementById('thoughtViewerTitle').textContent = thought.title || 'Story';
+        document.getElementById('thoughtViewerOwner').textContent = isOwner ? 'Votre Story' : 'Story';
 
         const actions = document.getElementById('thoughtViewerActions');
         actions.innerHTML = '';
@@ -3133,7 +3133,7 @@ class SkillsTracker {
         const container = document.getElementById('thoughtViewerBlocks');
         container.innerHTML = blocks.length
             ? blocks.map(b => this.viewerBlockHtml(b)).join('')
-            : '<div class="blocks-empty"><p>Cette Thought est vide.</p></div>';
+            : '<div class="blocks-empty"><p>Cette story est vide.</p></div>';
         this.thoughtViewerModal.style.display = 'flex';
     }
 

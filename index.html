@@ -241,18 +241,18 @@
     <div id="createMapModal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="createMapTitle">Créer un Thought</h2>
+                <h2 id="createMapTitle">Créer une Story</h2>
                 <button class="close-btn" onclick="skillsTracker.closeCreateMapModal()">×</button>
             </div>
             
             <div class="map-form">
-                <input type="text" id="mapTitle" placeholder="Titre du thought..." maxlength="200" required>
+                <input type="text" id="mapTitle" placeholder="Titre de la story..." maxlength="200" required>
                 <textarea id="mapDescription" placeholder="Description (optionnelle)..." maxlength="500" rows="3"></textarea>
                 
                 <div class="map-visibility">
                     <label>
                         <input type="checkbox" id="mapIsPublic" checked>
-                        Rendre ce thought public (visible par tous)
+                        Rendre cette story publique (visible par tous)
                     </label>
                 </div>
 
@@ -269,7 +269,7 @@
         <div class="whiteboard-container">
             <div class="whiteboard-header">
                 <div class="map-info">
-                    <h2 id="viewMapTitle">Thought</h2>
+                    <h2 id="viewMapTitle">Story</h2>
                     <p id="viewMapOwner" class="map-owner"></p>
                 </div>
                 <div class="whiteboard-actions">
@@ -312,7 +312,7 @@
         <div class="thought-container">
             <div class="thought-header">
                 <div class="thought-title-wrap">
-                    <h2 id="thoughtViewerTitle">Thought</h2>
+                    <h2 id="thoughtViewerTitle">Story</h2>
                     <p id="thoughtViewerOwner" class="thought-sub"></p>
                 </div>
                 <div class="thought-actions" id="thoughtViewerActions">
@@ -380,7 +380,7 @@
                 Personal Space
             </button>
             <button class="nav-tab" id="publicSpaceTab" onclick="skillsTracker.switchMainSpace('public')">
-                Thoughts
+                Stories
             </button>
             <button class="nav-tab" id="hyppoproofTab" onclick="skillsTracker.switchMainSpace('hyppoproof')">
                 Hyppoproof
@@ -401,9 +401,13 @@
         <!-- Public Space (Independent Thinking) -->
         <div id="publicSpace" class="main-space" style="display: none;">
             <div class="public-space-header">
+                <div class="stories-intro">
+                    <h2>Stories</h2>
+                    <p>tout est histoire</p>
+                </div>
                 <div class="shared-maps-tabs">
                     <button class="tab-btn active" onclick="skillsTracker.switchMapsTab('browse')">Parcourir</button>
-                    <button class="tab-btn" onclick="skillsTracker.switchMapsTab('my-maps')">Mes Thoughts</button>
+                    <button class="tab-btn" onclick="skillsTracker.switchMapsTab('my-maps')">Mes Stories</button>
                 </div>
             </div>
 
