@@ -325,6 +325,18 @@
         </div>
     </div>
 
+    <!-- Story Player Modal (vidéo consolidée) -->
+    <div id="storyPlayerModal" class="modal story-player-modal" style="display: none;">
+        <div class="player-stage" id="playerStage"></div>
+        <div class="player-controls">
+            <button class="player-btn" id="playerPrev" onclick="skillsTracker.playerPrev()" title="Précédent">⏮</button>
+            <button class="player-btn" id="playerPlayPause" onclick="skillsTracker.togglePlayPause()" title="Lecture/Pause">⏸</button>
+            <button class="player-btn" id="playerNext" onclick="skillsTracker.playerNext()" title="Suivant">⏭</button>
+            <div class="player-progress" id="playerProgress"></div>
+            <button class="player-btn player-close" onclick="skillsTracker.closeStoryPlayer()" title="Fermer">×</button>
+        </div>
+    </div>
+
     <!-- Whiteboard Modal -->
     <div id="whiteboardModal" class="modal whiteboard-modal" style="display: none;">
         <div class="whiteboard-container">

@@ -49,6 +49,12 @@ class SkillsTracker {
         this.editorMeta = null;          // { title, description, isPublic }
         this.editorThoughtId = null;     // null = création, sinon mise à jour
         this.activeWhiteboardBlockId = null; // bloc whiteboard ouvert en plein écran
+        // Lecteur "vidéo consolidée" de l'histoire
+        this.playerScenes = [];
+        this.playerIndex = 0;
+        this.playerToken = 0;
+        this.playerPaused = false;
+        this.playerTimer = null;
         this.initializeElements();
         this.bindEvents();
         this.checkAuth();
@@ -3106,6 +3112,12 @@ class SkillsTracker {
         const actions = document.getElementById('thoughtViewerActions');
         actions.innerHTML = '';
 
+        const watchBtn = document.createElement('button');
+        watchBtn.className = 'save-whiteboard-btn watch-story-btn';
+        watchBtn.innerHTML = '▶ Regarder';
+        watchBtn.onclick = () => this.openStoryPlayer(thought);
+        actions.appendChild(watchBtn);
+
         if (thought.is_public) {
             const shareBtn = document.createElement('button');
             shareBtn.className = 'save-whiteboard-btn share-thought-btn';
@@ -3178,6 +3190,167 @@ class SkillsTracker {
     carouselScroll(btn, dir) {
         const track = btn.closest('.view-carousel').querySelector('.carousel-track');
         track.scrollBy({ left: dir * track.clientWidth, behavior: 'smooth' });
+    }
+
+    // ===== LECTEUR "VIDÉO CONSOLIDÉE" =====
+
+    // Construit la liste ordonnée de scènes à partir des blocs
+    buildPlayerScenes(thought) {
+        const scenes = [];
+        if (thought.title) scenes.push({ kind: 'title', text: thought.title });
+        (thought.blocks || []).forEach(b => {
+            if (b.type === 'text' && (b.data.text || '').trim()) {
+                scenes.push({ kind: 'text', text: b.data.text });
+            } else if (b.type === 'whiteboard' && b.data.preview) {
+                scenes.push({ kind: 'image', url: b.data.preview });
+            } else if (b.type === 'carousel') {
+                (b.data.images || []).forEach(img => scenes.push({ kind: 'image', url: img.url }));
+            } else if (b.type === 'video' && b.data.url) {
+                scenes.push({ kind: 'video', url: b.data.url });
+            }
+        });
+        return scenes;
+    }
+
+    openStoryPlayer(thought) {
+        this.playerScenes = this.buildPlayerScenes(thought);
+        if (!this.playerScenes.length) {
+            alert('Cette story n\'a pas de contenu à lire.');
+            return;
+        }
+        // Pré-charge les voix de synthèse vocale
+        try { window.speechSynthesis && window.speechSynthesis.getVoices(); } catch (e) {}
+
+        this.playerIndex = 0;
+        this.playerPaused = false;
+        const btn = document.getElementById('playerPlayPause');
+        if (btn) btn.textContent = '⏸';
+        document.getElementById('storyPlayerModal').style.display = 'flex';
+        this.playScene(0);
+    }
+
+    closeStoryPlayer() {
+        this.clearPlayerTimer();
+        this.playerToken++; // invalide toute avance en attente
+        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+        const v = document.querySelector('#playerStage video');
+        if (v) { try { v.pause(); } catch (e) {} }
+        document.getElementById('storyPlayerModal').style.display = 'none';
+        document.getElementById('playerStage').innerHTML = '';
+        this.playerPaused = false;
+    }
+
+    clearPlayerTimer() {
+        if (this.playerTimer) { clearTimeout(this.playerTimer); this.playerTimer = null; }
+    }
+
+    playScene(index) {
+        this.clearPlayerTimer();
+        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+
+        if (index >= this.playerScenes.length) { this.closeStoryPlayer(); return; }
+        if (index < 0) index = 0;
+        this.playerIndex = index;
+        const token = ++this.playerToken;
+        const scene = this.playerScenes[index];
+
+        this.renderScene(scene);
+        this.updatePlayerProgress();
+
+        if (this.playerPaused) return; // attend la reprise
+        this.runScene(scene, token);
+    }
+
+    runScene(scene, token) {
+        const advance = () => {
+            if (token === this.playerToken && !this.playerPaused) {
+                this.playScene(this.playerIndex + 1);
+            }
+        };
+
+        if (scene.kind === 'title' || scene.kind === 'text') {
+            this.speak(scene.text, token, advance);
+        } else if (scene.kind === 'image') {
+            this.playerTimer = setTimeout(advance, 3800);
+        } else if (scene.kind === 'video') {
+            const v = document.querySelector('#playerStage video');
+            if (!v) { this.playerTimer = setTimeout(advance, 3000); return; }
+            v.onended = advance;
+            v.onerror = () => { this.playerTimer = setTimeout(advance, 800); };
+            const p = v.play();
+            if (p && p.catch) p.catch(() => { this.playerTimer = setTimeout(advance, 3000); });
+        }
+    }
+
+    speak(text, token, onEnd) {
+        const synth = window.speechSynthesis;
+        const estimate = Math.min(20000, Math.max(2600, text.length * 75));
+        if (!synth) { this.playerTimer = setTimeout(onEnd, estimate); return; }
+
+        try {
+            synth.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'en-US';
+            const voice = this.pickEnglishVoice();
+            if (voice) u.voice = voice;
+            u.onend = () => { if (token === this.playerToken && !this.playerPaused) onEnd(); };
+            u.onerror = () => { if (token === this.playerToken && !this.playerPaused) onEnd(); };
+            this.currentUtterance = u;
+            synth.speak(u);
+            // Filet de sécurité si onend ne se déclenche jamais (bug navigateur)
+            this.playerTimer = setTimeout(() => {
+                if (token === this.playerToken && !this.playerPaused) onEnd();
+            }, estimate + 4000);
+        } catch (e) {
+            this.playerTimer = setTimeout(onEnd, estimate);
+        }
+    }
+
+    pickEnglishVoice() {
+        try {
+            const voices = window.speechSynthesis.getVoices() || [];
+            return voices.find(v => /^en[-_]?/i.test(v.lang)) || null;
+        } catch (e) { return null; }
+    }
+
+    playerNext() { this.playScene(this.playerIndex + 1); }
+    playerPrev() { this.playScene(this.playerIndex - 1); }
+
+    togglePlayPause() {
+        const btn = document.getElementById('playerPlayPause');
+        const synth = window.speechSynthesis;
+        const v = document.querySelector('#playerStage video');
+        this.playerPaused = !this.playerPaused;
+
+        if (this.playerPaused) {
+            if (btn) btn.textContent = '▶';
+            this.clearPlayerTimer();
+            try { synth && synth.cancel(); } catch (e) {}
+            if (v) { try { v.pause(); } catch (e) {} }
+        } else {
+            if (btn) btn.textContent = '⏸';
+            // Reprend la scène courante proprement
+            this.runScene(this.playerScenes[this.playerIndex], ++this.playerToken);
+        }
+    }
+
+    updatePlayerProgress() {
+        const el = document.getElementById('playerProgress');
+        if (el) el.textContent = `${this.playerIndex + 1} / ${this.playerScenes.length}`;
+    }
+
+    renderScene(scene) {
+        const stage = document.getElementById('playerStage');
+        if (!stage) return;
+        if (scene.kind === 'title') {
+            stage.innerHTML = `<div class="player-title">${this.escapeHtml(scene.text)}</div>`;
+        } else if (scene.kind === 'text') {
+            stage.innerHTML = `<div class="player-text">${this.escapeHtml(scene.text).replace(/\n/g, '<br>')}</div>`;
+        } else if (scene.kind === 'image') {
+            stage.innerHTML = `<img class="player-image" src="${scene.url}" alt="">`;
+        } else if (scene.kind === 'video') {
+            stage.innerHTML = `<video class="player-video" src="${scene.url}" playsinline></video>`;
+        }
     }
 
     // ===== HYPPOPROOF FUNCTIONS =====
