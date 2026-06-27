@@ -1595,6 +1595,7 @@ h1 {
 }
 
 .stories-intro {
+    margin-top: -18px;
     margin-bottom: 20px;
     text-align: center;
 }
