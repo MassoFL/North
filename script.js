@@ -2726,7 +2726,7 @@ class SkillsTracker {
         this.editorMeta = { ...meta };
         this.editorBlocks = Array.isArray(blocks) ? JSON.parse(JSON.stringify(blocks)) : [];
         this.editorThoughtId = thoughtId || null;
-        document.getElementById('thoughtEditorTitle').textContent = meta.title || 'Éditeur';
+        document.getElementById('thoughtEditorTitle').textContent = 'Éditeur';
         this.thoughtEditorModal.style.display = 'flex';
         this.renderEditorBlocks();
     }
@@ -2780,14 +2780,15 @@ class SkillsTracker {
     renderEditorBlocks() {
         const container = document.getElementById('thoughtBlocks');
         if (!container) return;
-        if (!this.editorBlocks.length) {
-            container.innerHTML = `<div class="blocks-empty">
+        const title = (this.editorMeta && this.editorMeta.title) || '';
+        const head = `<div class="story-head"><h1 class="story-title">${this.escapeHtml(title)}</h1></div>`;
+        const body = this.editorBlocks.length
+            ? this.editorBlocks.map((b, i) => this.editorBlockHtml(b, i)).join('')
+            : `<div class="blocks-empty">
                 <p>Votre mur est vide.</p>
                 <p class="blocks-empty-sub">Ajoutez un premier bloc ci-dessous.</p>
             </div>`;
-            return;
-        }
-        container.innerHTML = this.editorBlocks.map((b, i) => this.editorBlockHtml(b, i)).join('');
+        container.innerHTML = head + body;
     }
 
     editorBlockHtml(block, index) {
@@ -3097,7 +3098,9 @@ class SkillsTracker {
 
     openThoughtViewer(thought, isOwner) {
         const blocks = Array.isArray(thought.blocks) ? thought.blocks : [];
-        document.getElementById('thoughtViewerTitle').textContent = thought.title || 'Story';
+        // Le titre s'affiche en gras en tête de l'histoire (pas dans la barre du modal)
+        const titleWrap = document.querySelector('#thoughtViewerModal .thought-title-wrap');
+        if (titleWrap) titleWrap.style.display = 'none';
         document.getElementById('thoughtViewerOwner').textContent = isOwner ? 'Votre Story' : 'Story';
 
         const actions = document.getElementById('thoughtViewerActions');
@@ -3130,10 +3133,11 @@ class SkillsTracker {
         closeBtn.onclick = () => this.closeThoughtViewer();
         actions.appendChild(closeBtn);
 
+        const head = `<div class="story-head"><h1 class="story-title">${this.escapeHtml(thought.title || 'Story')}</h1><p class="story-owner">${isOwner ? 'Votre Story' : 'Story'}</p></div>`;
         const container = document.getElementById('thoughtViewerBlocks');
-        container.innerHTML = blocks.length
+        container.innerHTML = head + (blocks.length
             ? blocks.map(b => this.viewerBlockHtml(b)).join('')
-            : '<div class="blocks-empty"><p>Cette story est vide.</p></div>';
+            : '<div class="blocks-empty"><p>Cette story est vide.</p></div>');
         this.thoughtViewerModal.style.display = 'flex';
     }
 

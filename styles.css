@@ -2465,6 +2465,24 @@ span.ic > svg.ic {
     max-width: 720px;
     margin: 0 auto;
 }
+
+/* Titre de l'histoire (en gras, en tête du mur) */
+.story-head {
+    margin-bottom: 4px;
+}
+.story-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #000;
+    margin: 0;
+    line-height: 1.25;
+    word-wrap: break-word;
+}
+.story-owner {
+    color: #888;
+    font-size: 13px;
+    margin: 6px 0 0;
+}
 .view-block { width: 100%; }
 
 .view-text {
