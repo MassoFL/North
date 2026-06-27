@@ -1596,12 +1596,7 @@ h1 {
 
 .stories-intro {
     margin-bottom: 20px;
-}
-.stories-intro h2 {
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: #000;
-    margin: 0 0 4px 0;
+    text-align: center;
 }
 .stories-intro p {
     color: #666;
