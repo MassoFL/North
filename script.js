@@ -44,6 +44,11 @@ class SkillsTracker {
         this.currentMapId = null;
         this.currentMapMode = 'view'; // 'view' or 'edit'
         this.viewExcalidrawAPI = null;
+        // Thought "mur à blocs"
+        this.editorBlocks = [];          // blocs en cours d'édition
+        this.editorMeta = null;          // { title, description, isPublic }
+        this.editorThoughtId = null;     // null = création, sinon mise à jour
+        this.activeWhiteboardBlockId = null; // bloc whiteboard ouvert en plein écran
         this.initializeElements();
         this.bindEvents();
         this.checkAuth();
@@ -132,6 +137,8 @@ class SkillsTracker {
         // Shared Maps (now integrated in main layout)
         this.createMapModal = document.getElementById('createMapModal');
         this.viewSharedMapModal = document.getElementById('viewSharedMapModal');
+        this.thoughtEditorModal = document.getElementById('thoughtEditorModal');
+        this.thoughtViewerModal = document.getElementById('thoughtViewerModal');
         this.saveMapMetaBtn = document.getElementById('saveMapMetaBtn');
         this.personalSpaceTab = document.getElementById('personalSpaceTab');
         this.publicSpaceTab = document.getElementById('publicSpaceTab');
@@ -2058,10 +2065,10 @@ class SkillsTracker {
 
         // Store metadata temporarily
         this.tempMapMetadata = { title, description, isPublic };
-        
-        // Close metadata modal and open Excalidraw editor
+
+        // Close metadata modal and open the block-based Thought editor
         this.closeCreateMapModal();
-        this.openMapEditor();
+        this.openThoughtEditor({ title, description, isPublic }, [], null);
     }
 
     openMapEditor() {
@@ -2117,9 +2124,15 @@ class SkillsTracker {
 
             this.currentMapId = mapId;
             this.currentMapMode = 'view';
-            
+
             const isOwner = data.owner_id === this.user.id;
-            
+
+            // Nouveau format "mur à blocs"
+            if (Array.isArray(data.blocks) && data.blocks.length) {
+                this.openThoughtViewer(data, isOwner);
+                return;
+            }
+
             document.getElementById('viewMapTitle').textContent = data.title;
             document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Thought';
             
@@ -2410,38 +2423,17 @@ class SkillsTracker {
                 isPublic: data.is_public
             };
 
-            document.getElementById('viewMapTitle').textContent = data.title;
-            document.getElementById('viewMapOwner').textContent = 'Mode édition';
-            
-            const readOnlyBadge = document.getElementById('viewMapReadOnly');
-            if (readOnlyBadge) {
-                readOnlyBadge.style.display = 'none';
-            }
-            
-            this.viewSharedMapModal.style.display = 'flex';
-            
-            // Clean existing buttons first
-            const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
-            let closeBtn = header.querySelector('.close-btn');
-            header.innerHTML = '';
-            
-            // Recreate close button if it doesn't exist
-            if (!closeBtn) {
-                closeBtn = document.createElement('button');
-                closeBtn.className = 'close-btn';
-                closeBtn.textContent = '×';
-                closeBtn.onclick = () => this.closeViewSharedMap();
-            }
-            header.appendChild(closeBtn);
-            
-            // Add update button
-            const saveBtn = document.createElement('button');
-            saveBtn.className = 'save-whiteboard-btn';
-            saveBtn.innerHTML = `${icon('whiteboard__save')} Mettre à jour`;
-            saveBtn.onclick = () => this.updateSharedMap();
-            header.insertBefore(saveBtn, closeBtn);
-            
-            this.initializeMapExcalidraw(data.excalidraw_data, false);
+            // Nouveau format "mur à blocs" : ouvrir l'éditeur de blocs
+            const existingBlocks = (Array.isArray(data.blocks) && data.blocks.length)
+                ? data.blocks
+                : (data.excalidraw_data && Array.isArray(data.excalidraw_data.elements) && data.excalidraw_data.elements.length
+                    ? [{ id: this.genBlockId(), type: 'whiteboard', data: { ...data.excalidraw_data, preview: null } }]
+                    : []);
+            this.openThoughtEditor(
+                { title: data.title, description: data.description, isPublic: data.is_public },
+                existingBlocks,
+                mapId
+            );
 
         } catch (error) {
             console.error('Error loading map for edit:', error);
@@ -2645,10 +2637,17 @@ class SkillsTracker {
             this.currentMapMode = 'view';
             
             const isOwner = this.user && data.owner_id === this.user.id;
-            
+
             // Hide auth modal if showing
             this.authModal.style.display = 'none';
-            
+
+            // Nouveau format "mur à blocs"
+            if (Array.isArray(data.blocks) && data.blocks.length) {
+                this.openThoughtViewer(data, isOwner);
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+
             document.getElementById('viewMapTitle').textContent = data.title;
             document.getElementById('viewMapOwner').textContent = isOwner ? 'Votre thought' : 'Thought';
             
@@ -2705,6 +2704,476 @@ class SkillsTracker {
             alert('Erreur lors du chargement du thought. Il n\'existe peut-être plus.');
             window.history.replaceState({}, document.title, window.location.pathname);
         }
+    }
+
+    // ===== THOUGHT "MUR À BLOCS" =====
+
+    genBlockId() {
+        return 'blk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    makeBlock(type) {
+        const block = { id: this.genBlockId(), type };
+        if (type === 'text') block.data = { text: '' };
+        else if (type === 'whiteboard') block.data = { elements: [], appState: {}, files: {}, preview: null };
+        else if (type === 'carousel') block.data = { images: [] };
+        else if (type === 'video') block.data = { url: '', path: '', mime: '' };
+        else block.data = {};
+        return block;
+    }
+
+    openThoughtEditor(meta, blocks, thoughtId) {
+        this.editorMeta = { ...meta };
+        this.editorBlocks = Array.isArray(blocks) ? JSON.parse(JSON.stringify(blocks)) : [];
+        this.editorThoughtId = thoughtId || null;
+        document.getElementById('thoughtEditorTitle').textContent = meta.title || 'Éditeur';
+        this.thoughtEditorModal.style.display = 'flex';
+        this.renderEditorBlocks();
+    }
+
+    closeThoughtEditor() {
+        if (this.editorBlocks.length && !confirm('Fermer l\'éditeur ? Les modifications non publiées seront perdues.')) {
+            return;
+        }
+        this.thoughtEditorModal.style.display = 'none';
+        this.editorBlocks = [];
+        this.editorMeta = null;
+        this.editorThoughtId = null;
+    }
+
+    addBlock(type) {
+        const block = this.makeBlock(type);
+        this.editorBlocks.push(block);
+        this.renderEditorBlocks();
+        const el = document.getElementById('block-' + block.id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    moveBlock(blockId, dir) {
+        const i = this.editorBlocks.findIndex(b => b.id === blockId);
+        const j = i + dir;
+        if (i < 0 || j < 0 || j >= this.editorBlocks.length) return;
+        [this.editorBlocks[i], this.editorBlocks[j]] = [this.editorBlocks[j], this.editorBlocks[i]];
+        this.renderEditorBlocks();
+    }
+
+    removeBlock(blockId) {
+        if (!confirm('Supprimer ce bloc ?')) return;
+        const block = this.editorBlocks.find(b => b.id === blockId);
+        // Nettoyer les médias associés
+        if (block) {
+            if (block.type === 'carousel') {
+                (block.data.images || []).forEach(img => img.path && this.deleteMedia(img.path));
+            } else if (block.type === 'video' && block.data.path) {
+                this.deleteMedia(block.data.path);
+            }
+        }
+        this.editorBlocks = this.editorBlocks.filter(b => b.id !== blockId);
+        this.renderEditorBlocks();
+    }
+
+    updateTextBlock(blockId, value) {
+        const block = this.editorBlocks.find(b => b.id === blockId);
+        if (block) block.data.text = value;
+    }
+
+    renderEditorBlocks() {
+        const container = document.getElementById('thoughtBlocks');
+        if (!container) return;
+        if (!this.editorBlocks.length) {
+            container.innerHTML = `<div class="blocks-empty">
+                <p>Votre mur est vide.</p>
+                <p class="blocks-empty-sub">Ajoutez un premier bloc ci-dessous.</p>
+            </div>`;
+            return;
+        }
+        container.innerHTML = this.editorBlocks.map((b, i) => this.editorBlockHtml(b, i)).join('');
+    }
+
+    editorBlockHtml(block, index) {
+        const last = this.editorBlocks.length - 1;
+        const labels = { text: '📝 Texte', whiteboard: '🎨 Tableau blanc', carousel: '🖼️ Carrousel', video: '🎬 Vidéo' };
+        let body = '';
+
+        if (block.type === 'text') {
+            body = `<textarea class="block-text-input" placeholder="Écrivez votre texte…" oninput="skillsTracker.updateTextBlock('${block.id}', this.value)">${this.escapeHtml(block.data.text || '')}</textarea>`;
+        } else if (block.type === 'whiteboard') {
+            const preview = block.data && block.data.preview;
+            body = `<div class="block-wb">
+                ${preview ? `<img src="${preview}" class="block-wb-preview" alt="Aperçu du tableau">` : `<div class="block-wb-empty">Aucun dessin pour l'instant</div>`}
+                <button class="block-action-btn" onclick="skillsTracker.openBlockWhiteboard('${block.id}')">${preview ? 'Modifier le tableau' : 'Dessiner'}</button>
+            </div>`;
+        } else if (block.type === 'carousel') {
+            const thumbs = (block.data.images || []).map((img, i) =>
+                `<div class="block-thumb"><img src="${img.url}" alt=""><button class="thumb-remove" title="Retirer" onclick="skillsTracker.removeCarouselImage('${block.id}', ${i})">×</button></div>`
+            ).join('');
+            body = `<div class="block-carousel-edit">
+                <div class="block-thumbs">${thumbs}${block._uploading ? '<div class="block-thumb uploading">…</div>' : ''}</div>
+                <label class="block-action-btn file-label">＋ Ajouter des photos
+                    <input type="file" accept="image/*" multiple style="display:none" onchange="skillsTracker.handleCarouselUpload('${block.id}', this)">
+                </label>
+            </div>`;
+        } else if (block.type === 'video') {
+            if (block.data.url) {
+                body = `<div class="block-video-edit">
+                    <video class="block-video" src="${block.data.url}" controls></video>
+                    <button class="block-action-btn danger" onclick="skillsTracker.removeVideoBlock('${block.id}')">Retirer la vidéo</button>
+                </div>`;
+            } else {
+                body = `<div class="block-video-edit">
+                    <label class="block-action-btn file-label">${block._uploading ? 'Téléversement…' : '＋ Choisir une vidéo'}
+                        <input type="file" accept="video/*" style="display:none" onchange="skillsTracker.handleVideoUpload('${block.id}', this)">
+                    </label>
+                </div>`;
+            }
+        }
+
+        return `<div class="thought-block" id="block-${block.id}">
+            <div class="block-head">
+                <span class="block-type">${labels[block.type] || block.type}</span>
+                <div class="block-controls">
+                    <button class="block-ctrl" ${index === 0 ? 'disabled' : ''} title="Monter" onclick="skillsTracker.moveBlock('${block.id}', -1)">↑</button>
+                    <button class="block-ctrl" ${index === last ? 'disabled' : ''} title="Descendre" onclick="skillsTracker.moveBlock('${block.id}', 1)">↓</button>
+                    <button class="block-ctrl danger" title="Supprimer" onclick="skillsTracker.removeBlock('${block.id}')">🗑</button>
+                </div>
+            </div>
+            <div class="block-body">${body}</div>
+        </div>`;
+    }
+
+    // ---- Stockage des médias (Supabase Storage) ----
+
+    async uploadMedia(file) {
+        if (!this.user) throw new Error('Vous devez être connecté pour téléverser un fichier.');
+        const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const path = `${this.user.id}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error } = await supabaseClient.storage
+            .from('thought-media')
+            .upload(path, file, { contentType: file.type, upsert: false });
+        if (error) throw error;
+        const { data } = supabaseClient.storage.from('thought-media').getPublicUrl(path);
+        return { url: data.publicUrl, path };
+    }
+
+    async deleteMedia(path) {
+        try {
+            await supabaseClient.storage.from('thought-media').remove([path]);
+        } catch (e) {
+            console.warn('Could not delete media:', path, e);
+        }
+    }
+
+    async handleCarouselUpload(blockId, input) {
+        const files = Array.from(input.files || []);
+        input.value = '';
+        if (!files.length) return;
+        const block = this.editorBlocks.find(b => b.id === blockId);
+        if (!block) return;
+        block._uploading = true;
+        this.renderEditorBlocks();
+        try {
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) continue;
+                const media = await this.uploadMedia(file);
+                block.data.images.push(media);
+            }
+        } catch (e) {
+            console.error('Carousel upload error:', e);
+            alert('Erreur lors du téléversement des images: ' + e.message);
+        } finally {
+            block._uploading = false;
+            this.renderEditorBlocks();
+        }
+    }
+
+    removeCarouselImage(blockId, index) {
+        const block = this.editorBlocks.find(b => b.id === blockId);
+        if (!block) return;
+        const img = block.data.images[index];
+        block.data.images.splice(index, 1);
+        this.renderEditorBlocks();
+        if (img && img.path) this.deleteMedia(img.path);
+    }
+
+    async handleVideoUpload(blockId, input) {
+        const file = (input.files || [])[0];
+        input.value = '';
+        if (!file) return;
+        if (!file.type.startsWith('video/')) {
+            alert('Veuillez choisir un fichier vidéo.');
+            return;
+        }
+        const block = this.editorBlocks.find(b => b.id === blockId);
+        if (!block) return;
+        block._uploading = true;
+        this.renderEditorBlocks();
+        try {
+            const media = await this.uploadMedia(file);
+            block.data = { url: media.url, path: media.path, mime: file.type };
+        } catch (e) {
+            console.error('Video upload error:', e);
+            alert('Erreur lors du téléversement de la vidéo: ' + e.message);
+        } finally {
+            block._uploading = false;
+            this.renderEditorBlocks();
+        }
+    }
+
+    removeVideoBlock(blockId) {
+        const block = this.editorBlocks.find(b => b.id === blockId);
+        if (!block) return;
+        const oldPath = block.data.path;
+        block.data = { url: '', path: '', mime: '' };
+        this.renderEditorBlocks();
+        if (oldPath) this.deleteMedia(oldPath);
+    }
+
+    // ---- Bloc whiteboard : édition plein écran (réutilise Excalidraw) ----
+
+    openBlockWhiteboard(blockId) {
+        const block = this.editorBlocks.find(b => b.id === blockId);
+        if (!block) return;
+        this.activeWhiteboardBlockId = blockId;
+        this.tempMapData = null;
+        this.viewExcalidrawAPI = null;
+
+        const modal = this.viewSharedMapModal;
+        modal.style.zIndex = '4000';
+        modal.style.display = 'flex';
+        document.getElementById('viewMapTitle').textContent = 'Tableau blanc';
+        document.getElementById('viewMapOwner').textContent = 'Bloc de votre Thought';
+        const readOnlyBadge = document.getElementById('viewMapReadOnly');
+        if (readOnlyBadge) readOnlyBadge.style.display = 'none';
+
+        const header = document.querySelector('#viewSharedMapModal .whiteboard-header .whiteboard-actions');
+        header.innerHTML = '';
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'save-whiteboard-btn';
+        saveBtn.innerHTML = `${icon('whiteboard__save')} Enregistrer le tableau`;
+        saveBtn.onclick = () => this.saveBlockWhiteboard();
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'close-btn';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = () => this.closeBlockWhiteboard();
+        header.appendChild(saveBtn);
+        header.appendChild(closeBtn);
+
+        const hasData = block.data && Array.isArray(block.data.elements) && block.data.elements.length;
+        this.initializeMapExcalidraw(hasData ? block.data : null, false);
+    }
+
+    async saveBlockWhiteboard() {
+        const block = this.editorBlocks.find(b => b.id === this.activeWhiteboardBlockId);
+        if (!block) { this.closeBlockWhiteboard(); return; }
+
+        let dataToSave = this.tempMapData;
+        if (!dataToSave && this.viewExcalidrawAPI) {
+            dataToSave = {
+                elements: this.viewExcalidrawAPI.getSceneElements(),
+                appState: this.viewExcalidrawAPI.getAppState(),
+                files: this.viewExcalidrawAPI.getFiles()
+            };
+        }
+        if (!dataToSave) dataToSave = { elements: [], appState: {}, files: {} };
+
+        const cleanData = {
+            elements: Array.isArray(dataToSave.elements) ? dataToSave.elements : [],
+            appState: {
+                viewBackgroundColor: dataToSave.appState?.viewBackgroundColor || '#ffffff',
+                gridSize: dataToSave.appState?.gridSize || null
+            },
+            files: dataToSave.files || {}
+        };
+        cleanData.preview = await this.generateWhiteboardPreview(cleanData);
+
+        block.data = cleanData;
+        this.closeBlockWhiteboard();
+        this.renderEditorBlocks();
+    }
+
+    closeBlockWhiteboard() {
+        const modal = this.viewSharedMapModal;
+        modal.style.display = 'none';
+        modal.style.zIndex = '';
+        document.getElementById('viewExcalidrawContainer').innerHTML = '';
+        this.viewExcalidrawAPI = null;
+        this.tempMapData = null;
+        this.activeWhiteboardBlockId = null;
+    }
+
+    async generateWhiteboardPreview(data) {
+        try {
+            const lib = window.ExcalidrawLib;
+            if (!lib || typeof lib.exportToBlob !== 'function') return null;
+            if (!Array.isArray(data.elements) || data.elements.length === 0) return null;
+            const blob = await lib.exportToBlob({
+                elements: data.elements,
+                files: data.files || {},
+                appState: { exportBackground: true, viewBackgroundColor: '#ffffff' },
+                mimeType: 'image/png',
+                quality: 0.85,
+                getDimensions: (w, h) => {
+                    const scale = Math.min(1, 1200 / Math.max(w, 1));
+                    return { width: w * scale, height: h * scale, scale };
+                }
+            });
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.warn('Aperçu du tableau indisponible:', e);
+            return null;
+        }
+    }
+
+    // ---- Publication ----
+
+    async saveThought() {
+        if (!this.editorMeta) return;
+        if (!this.editorBlocks.length) {
+            alert('Ajoutez au moins un bloc avant de publier.');
+            return;
+        }
+        if (this.editorBlocks.some(b => b._uploading)) {
+            alert('Un téléversement est en cours, veuillez patienter.');
+            return;
+        }
+
+        const hasContent = this.editorBlocks.some(b => {
+            if (b.type === 'text') return (b.data.text || '').trim().length;
+            if (b.type === 'whiteboard') return Array.isArray(b.data.elements) && b.data.elements.length;
+            if (b.type === 'carousel') return (b.data.images || []).length;
+            if (b.type === 'video') return !!b.data.url;
+            return false;
+        });
+        if (!hasContent) {
+            alert('Vos blocs sont vides. Ajoutez du contenu avant de publier.');
+            return;
+        }
+
+        // Retirer les flags transitoires (_uploading) avant sauvegarde
+        const blocks = this.editorBlocks.map(b => ({ id: b.id, type: b.type, data: b.data }));
+
+        const payload = {
+            title: this.editorMeta.title,
+            description: this.editorMeta.description,
+            is_public: this.editorMeta.isPublic,
+            blocks: blocks,
+            updated_at: new Date().toISOString()
+        };
+
+        try {
+            if (this.editorThoughtId) {
+                const { error } = await supabaseClient
+                    .from('shared_maps')
+                    .update(payload)
+                    .eq('id', this.editorThoughtId);
+                if (error) throw error;
+            } else {
+                payload.owner_id = this.user.id;
+                const { error } = await supabaseClient
+                    .from('shared_maps')
+                    .insert([payload]);
+                if (error) throw error;
+            }
+
+            this.thoughtEditorModal.style.display = 'none';
+            this.editorBlocks = [];
+            this.editorMeta = null;
+            this.editorThoughtId = null;
+            alert('✅ Thought publié !');
+            this.switchMainSpace('public');
+            this.switchMapsTab('my-maps');
+        } catch (e) {
+            console.error('Error saving thought:', e);
+            alert('Erreur lors de la publication: ' + e.message);
+        }
+    }
+
+    // ---- Lecture du mur ----
+
+    openThoughtViewer(thought, isOwner) {
+        const blocks = Array.isArray(thought.blocks) ? thought.blocks : [];
+        document.getElementById('thoughtViewerTitle').textContent = thought.title || 'Thought';
+        document.getElementById('thoughtViewerOwner').textContent = isOwner ? 'Votre Thought' : 'Thought';
+
+        const actions = document.getElementById('thoughtViewerActions');
+        actions.innerHTML = '';
+
+        if (thought.is_public) {
+            const shareBtn = document.createElement('button');
+            shareBtn.className = 'save-whiteboard-btn share-thought-btn';
+            shareBtn.innerHTML = `${icon('thoughts-card__share-link')} Partager`;
+            shareBtn.onclick = () => this.shareMapLink(thought.id);
+            actions.appendChild(shareBtn);
+        }
+        if (isOwner) {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'save-whiteboard-btn';
+            editBtn.innerHTML = `${icon('thoughts-card__edit')} Modifier`;
+            editBtn.onclick = () => { this.closeThoughtViewer(); this.editMap(thought.id); };
+            actions.appendChild(editBtn);
+        }
+        if (!this.user) {
+            const loginBtn = document.createElement('button');
+            loginBtn.className = 'save-whiteboard-btn';
+            loginBtn.innerHTML = `${icon('auth__login')} Se connecter`;
+            loginBtn.onclick = () => { this.closeThoughtViewer(); this.showAuth(); };
+            actions.appendChild(loginBtn);
+        }
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'close-btn';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = () => this.closeThoughtViewer();
+        actions.appendChild(closeBtn);
+
+        const container = document.getElementById('thoughtViewerBlocks');
+        container.innerHTML = blocks.length
+            ? blocks.map(b => this.viewerBlockHtml(b)).join('')
+            : '<div class="blocks-empty"><p>Cette Thought est vide.</p></div>';
+        this.thoughtViewerModal.style.display = 'flex';
+    }
+
+    closeThoughtViewer() {
+        this.thoughtViewerModal.style.display = 'none';
+        document.getElementById('thoughtViewerBlocks').innerHTML = '';
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    viewerBlockHtml(block) {
+        if (block.type === 'text') {
+            const safe = this.escapeHtml(block.data.text || '').replace(/\n/g, '<br>');
+            if (!safe.trim()) return '';
+            return `<div class="view-block view-text">${safe}</div>`;
+        }
+        if (block.type === 'whiteboard') {
+            if (block.data.preview) {
+                return `<div class="view-block view-wb"><img src="${block.data.preview}" alt="Tableau blanc"></div>`;
+            }
+            return '';
+        }
+        if (block.type === 'carousel') {
+            const imgs = block.data.images || [];
+            if (!imgs.length) return '';
+            const slides = imgs.map(img => `<div class="carousel-slide"><img src="${img.url}" alt=""></div>`).join('');
+            const arrows = imgs.length > 1 ? `
+                <button class="carousel-arrow prev" onclick="skillsTracker.carouselScroll(this, -1)">‹</button>
+                <button class="carousel-arrow next" onclick="skillsTracker.carouselScroll(this, 1)">›</button>` : '';
+            return `<div class="view-block view-carousel"><div class="carousel-track">${slides}</div>${arrows}</div>`;
+        }
+        if (block.type === 'video') {
+            if (!block.data.url) return '';
+            return `<div class="view-block view-video"><video src="${block.data.url}" controls playsinline></video></div>`;
+        }
+        return '';
+    }
+
+    carouselScroll(btn, dir) {
+        const track = btn.closest('.view-carousel').querySelector('.carousel-track');
+        track.scrollBy({ left: dir * track.clientWidth, behavior: 'smooth' });
     }
 
     // ===== HYPPOPROOF FUNCTIONS =====

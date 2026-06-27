@@ -281,6 +281,50 @@
         </div>
     </div>
 
+    <!-- Thought Editor Modal (mur à blocs) -->
+    <div id="thoughtEditorModal" class="modal thought-modal" style="display: none;">
+        <div class="thought-container">
+            <div class="thought-header">
+                <div class="thought-title-wrap">
+                    <h2 id="thoughtEditorTitle">Éditeur</h2>
+                    <p class="thought-sub">Composez votre mur de blocs</p>
+                </div>
+                <div class="thought-actions">
+                    <button class="save-whiteboard-btn" onclick="skillsTracker.saveThought()"><span class="ic" data-icon="whiteboard__save"></span> Publier</button>
+                    <button class="close-btn" onclick="skillsTracker.closeThoughtEditor()">×</button>
+                </div>
+            </div>
+            <div class="thought-body">
+                <div id="thoughtBlocks" class="thought-blocks"></div>
+                <div class="add-block-bar">
+                    <span class="add-block-label">Ajouter un bloc</span>
+                    <button class="add-block-btn" onclick="skillsTracker.addBlock('text')">＋ Texte</button>
+                    <button class="add-block-btn" onclick="skillsTracker.addBlock('whiteboard')">＋ Tableau</button>
+                    <button class="add-block-btn" onclick="skillsTracker.addBlock('carousel')">＋ Photos</button>
+                    <button class="add-block-btn" onclick="skillsTracker.addBlock('video')">＋ Vidéo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thought Viewer Modal (mur en lecture) -->
+    <div id="thoughtViewerModal" class="modal thought-modal" style="display: none;">
+        <div class="thought-container">
+            <div class="thought-header">
+                <div class="thought-title-wrap">
+                    <h2 id="thoughtViewerTitle">Thought</h2>
+                    <p id="thoughtViewerOwner" class="thought-sub"></p>
+                </div>
+                <div class="thought-actions" id="thoughtViewerActions">
+                    <button class="close-btn" onclick="skillsTracker.closeThoughtViewer()">×</button>
+                </div>
+            </div>
+            <div class="thought-body">
+                <div id="thoughtViewerBlocks" class="thought-blocks thought-blocks-view"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Whiteboard Modal -->
     <div id="whiteboardModal" class="modal whiteboard-modal" style="display: none;">
         <div class="whiteboard-container">
