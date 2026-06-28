@@ -5,7 +5,7 @@
 // Optionnel : définir MISTRAL_AGENT_ID pour réutiliser un agent existant
 // (évite d'en recréer un à chaque démarrage à froid de la fonction).
 
-const BASE = 'https://api.mistral.ai/v1/beta';
+const BASE = 'https://api.mistral.ai/v1';
 const MODEL = 'mistral-medium-latest';
 
 // Cache de l'agent pour les invocations "à chaud" de la même instance.
@@ -135,10 +135,10 @@ module.exports = async (req, res) => {
         if (ctx) inputs.push({ role: 'user', content: ctx });
         for (const m of safeMessages) inputs.push(m);
 
-        const r = await fetch(`${BASE}/conversations/start`, {
+        const r = await fetch(`${BASE}/conversations`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ agent_id: agentId, inputs })
+            body: JSON.stringify({ agent_id: agentId, inputs, stream: false })
         });
 
         if (!r.ok) {
