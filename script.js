@@ -38,6 +38,7 @@ class SkillsTracker {
         this.currentOnboardingStep = 1;
         this.editingSkillId = null;
         this.excalidrawAPI = null;
+        this.tempWhiteboardData = null;
         this.currentWhiteboardSkillId = null;
         this.sharedMaps = [];
         this.hypotheses = [];
@@ -1530,6 +1531,8 @@ class SkillsTracker {
         console.log('Saved whiteboard data:', skill.whiteboard_data);
 
         this.currentWhiteboardSkillId = skillId;
+        this.excalidrawAPI = null;
+        this.tempWhiteboardData = null;
         this.whiteboardTitle.textContent = `Tableau blanc - ${skill.name}`;
         this.whiteboardModal.style.display = 'flex';
 
@@ -1632,7 +1635,13 @@ class SkillsTracker {
             const excalidrawProps = {
                 initialData: initialData,
                 onChange: (elements, appState, files) => {
-                    console.log('📝 Excalidraw onChange - Elements:', elements?.length || 0);
+                    // Filet de sécurité : on garde toujours la dernière scène,
+                    // au cas où la capture de l'API (excalidrawAPI/ref) ne se déclenche pas.
+                    this.tempWhiteboardData = {
+                        elements: Array.isArray(elements) ? elements : [],
+                        appState: appState || {},
+                        files: files || {}
+                    };
                 }
             };
 
@@ -1671,9 +1680,14 @@ class SkillsTracker {
         console.log('excalidrawAPI:', this.excalidrawAPI);
         console.log('currentWhiteboardSkillId:', this.currentWhiteboardSkillId);
         
+        // Si l'API n'a pas pu être captée, on tente une dernière récupération,
+        // sinon on se rabattra sur les données captées via onChange (tempWhiteboardData).
         if (!this.excalidrawAPI) {
-            console.error('ExcalidrawAPI is not available');
-            alert('Erreur: L\'API Excalidraw n\'est pas disponible. Essayez de fermer et rouvrir le tableau blanc.');
+            this.tryFindExcalidrawAPI();
+        }
+        if (!this.excalidrawAPI && !this.tempWhiteboardData) {
+            console.error('ExcalidrawAPI et données indisponibles');
+            alert('Erreur: Le tableau blanc n\'est pas encore prêt. Dessinez quelque chose puis réessayez, ou fermez et rouvrez le tableau.');
             return;
         }
 
@@ -1693,20 +1707,21 @@ class SkillsTracker {
         saveBtn.innerHTML = `${icon('whiteboard__save')} Sauvegarde...`;
 
         try {
-            // Vérifier que les méthodes API existent
-            if (typeof this.excalidrawAPI.getSceneElements !== 'function') {
-                throw new Error('getSceneElements method not available on API');
+            // Récupère la scène : via l'API si disponible, sinon via les données captées par onChange
+            let elements, appState, files;
+            const apiOk = this.excalidrawAPI && typeof this.excalidrawAPI.getSceneElements === 'function';
+            if (apiOk) {
+                elements = this.excalidrawAPI.getSceneElements();
+                appState = this.excalidrawAPI.getAppState();
+                files = this.excalidrawAPI.getFiles();
+            } else if (this.tempWhiteboardData) {
+                console.warn('API Excalidraw indisponible, repli sur les données onChange');
+                elements = this.tempWhiteboardData.elements;
+                appState = this.tempWhiteboardData.appState;
+                files = this.tempWhiteboardData.files;
+            } else {
+                throw new Error('Aucune donnée de tableau blanc disponible');
             }
-            if (typeof this.excalidrawAPI.getAppState !== 'function') {
-                throw new Error('getAppState method not available on API');
-            }
-            if (typeof this.excalidrawAPI.getFiles !== 'function') {
-                throw new Error('getFiles method not available on API');
-            }
-
-            const elements = this.excalidrawAPI.getSceneElements();
-            const appState = this.excalidrawAPI.getAppState();
-            const files = this.excalidrawAPI.getFiles();
 
             console.log('Saving whiteboard data...');
             console.log('Elements count:', elements ? elements.length : 0);
@@ -1819,6 +1834,7 @@ class SkillsTracker {
         this.whiteboardModal.style.display = 'none';
         this.currentWhiteboardSkillId = null;
         this.excalidrawAPI = null;
+        this.tempWhiteboardData = null;
         
         // Nettoyer le conteneur React
         if (this.excalidrawContainer.firstChild) {
