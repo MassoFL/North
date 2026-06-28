@@ -55,6 +55,9 @@ class SkillsTracker {
         this.playerToken = 0;
         this.playerPaused = false;
         this.playerTimer = null;
+        // Chat assistant IA (éditeur d'histoire)
+        this.chatMessages = [];
+        this._chatLoading = false;
         this.initializeElements();
         this.bindEvents();
         this.checkAuth();
@@ -2735,6 +2738,12 @@ class SkillsTracker {
         document.getElementById('thoughtEditorTitle').textContent = 'Éditeur';
         this.thoughtEditorModal.style.display = 'flex';
         this.renderEditorBlocks();
+        // Réinitialise le chat assistant pour cette histoire
+        this.chatMessages = [];
+        this._chatLoading = false;
+        const chatPanel = document.getElementById('editorChatPanel');
+        if (chatPanel) chatPanel.style.display = 'none';
+        this.renderChatMessages();
     }
 
     closeThoughtEditor() {
@@ -3350,6 +3359,85 @@ class SkillsTracker {
             stage.innerHTML = `<img class="player-image" src="${scene.url}" alt="">`;
         } else if (scene.kind === 'video') {
             stage.innerHTML = `<video class="player-video" src="${scene.url}" playsinline></video>`;
+        }
+    }
+
+    // ===== ASSISTANT IA (CHAT) =====
+    // Conversationnel uniquement : n'agit jamais sur l'histoire.
+
+    toggleChat() {
+        const panel = document.getElementById('editorChatPanel');
+        if (!panel) return;
+        const open = panel.style.display !== 'flex';
+        panel.style.display = open ? 'flex' : 'none';
+        if (open) {
+            this.renderChatMessages();
+            setTimeout(() => { const i = document.getElementById('chatInput'); if (i) i.focus(); }, 50);
+        }
+    }
+
+    renderChatMessages() {
+        const box = document.getElementById('chatMessages');
+        if (!box) return;
+        if (!this.chatMessages.length && !this._chatLoading) {
+            box.innerHTML = `<div class="chat-empty">Salut ! Je peux t'aider à développer ton histoire : idées, structure, ordre des blocs, formulations… Pose-moi une question.</div>`;
+            return;
+        }
+        let html = this.chatMessages.map(m => `
+            <div class="chat-msg chat-${m.role}">
+                <div class="chat-bubble">${this.escapeHtml(m.content).replace(/\n/g, '<br>')}</div>
+            </div>`).join('');
+        if (this._chatLoading) {
+            html += `<div class="chat-msg chat-assistant"><div class="chat-bubble chat-typing">…</div></div>`;
+        }
+        box.innerHTML = html;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    buildStoryContext() {
+        return {
+            title: (this.editorMeta && this.editorMeta.title) || '',
+            blocks: (this.editorBlocks || []).map(b => {
+                if (b.type === 'text') return { type: 'text', text: b.data.text || '' };
+                if (b.type === 'carousel') return { type: 'carousel', count: (b.data.images || []).length };
+                if (b.type === 'whiteboard') return { type: 'whiteboard' };
+                if (b.type === 'video') return { type: 'video' };
+                return { type: b.type };
+            })
+        };
+    }
+
+    async sendChatMessage() {
+        const input = document.getElementById('chatInput');
+        if (!input) return;
+        const text = (input.value || '').trim();
+        if (!text || this._chatLoading) return;
+
+        input.value = '';
+        this.chatMessages.push({ role: 'user', content: text });
+        this._chatLoading = true;
+        this.renderChatMessages();
+
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: this.chatMessages,
+                    story: this.buildStoryContext()
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+            this.chatMessages.push({ role: 'assistant', content: data.reply || '(réponse vide)' });
+        } catch (e) {
+            this.chatMessages.push({
+                role: 'assistant',
+                content: '⚠️ Erreur: ' + e.message + '\n(En local, /api/chat nécessite « vercel dev » ; en prod, vérifie la variable MISTRAL_API_KEY dans Vercel.)'
+            });
+        } finally {
+            this._chatLoading = false;
+            this.renderChatMessages();
         }
     }
 

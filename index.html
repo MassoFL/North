@@ -290,6 +290,7 @@
                     <p class="thought-sub">Composez votre mur de blocs</p>
                 </div>
                 <div class="thought-actions">
+                    <button class="save-whiteboard-btn assistant-toggle-btn" onclick="skillsTracker.toggleChat()">💬 Assistant</button>
                     <button class="save-whiteboard-btn" onclick="skillsTracker.saveThought()"><span class="ic" data-icon="whiteboard__save"></span> Publier</button>
                     <button class="close-btn" onclick="skillsTracker.closeThoughtEditor()">×</button>
                 </div>
@@ -302,6 +303,20 @@
                     <button class="add-block-btn" onclick="skillsTracker.addBlock('whiteboard')">＋ Tableau</button>
                     <button class="add-block-btn" onclick="skillsTracker.addBlock('carousel')">＋ Photos</button>
                     <button class="add-block-btn" onclick="skillsTracker.addBlock('video')">＋ Vidéo</button>
+                </div>
+            </div>
+
+            <!-- Assistant IA (chat, ne modifie pas l'histoire) -->
+            <div id="editorChatPanel" class="editor-chat" style="display: none;">
+                <div class="editor-chat-header">
+                    <span>💬 Assistant</span>
+                    <button class="close-btn" onclick="skillsTracker.toggleChat()">×</button>
+                </div>
+                <div class="editor-chat-messages" id="chatMessages"></div>
+                <div class="editor-chat-input">
+                    <textarea id="chatInput" rows="2" placeholder="Demande de l'aide pour ton histoire…"
+                        onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); skillsTracker.sendChatMessage();}"></textarea>
+                    <button class="block-action-btn" id="chatSendBtn" onclick="skillsTracker.sendChatMessage()">Envoyer</button>
                 </div>
             </div>
         </div>
