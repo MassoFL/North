@@ -2759,6 +2759,8 @@ class SkillsTracker {
         this._chatLoading = false;
         const chatPanel = document.getElementById('editorChatPanel');
         if (chatPanel) chatPanel.style.display = 'none';
+        const editorContainer = document.querySelector('#thoughtEditorModal .thought-container');
+        if (editorContainer) editorContainer.classList.remove('chat-open');
         this.renderChatMessages();
     }
 
@@ -3386,6 +3388,8 @@ class SkillsTracker {
         if (!panel) return;
         const open = panel.style.display !== 'flex';
         panel.style.display = open ? 'flex' : 'none';
+        const container = document.querySelector('#thoughtEditorModal .thought-container');
+        if (container) container.classList.toggle('chat-open', open);
         if (open) {
             this.renderChatMessages();
             setTimeout(() => { const i = document.getElementById('chatInput'); if (i) i.focus(); }, 50);

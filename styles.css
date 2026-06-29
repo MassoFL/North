@@ -2604,19 +2604,28 @@ span.ic > svg.ic {
 /* ============================================================
    ASSISTANT IA — panneau de chat dans l'éditeur
    ============================================================ */
+/* Ligne contenant l'éditeur (mur) + le chat assistant, côte à côte */
+.thought-content-row {
+    position: relative;
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* L'éditeur s'élargit quand le chat est fermé, se réduit quand il est ouvert */
+.thought-container.chat-open {
+    max-width: 1180px;
+}
+
 .editor-chat {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
     width: 380px;
-    max-width: 90vw;
+    max-width: 42vw;
+    flex-shrink: 0;
     background: #fff;
     border-left: 1px solid #e0e0e0;
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
     display: flex;
     flex-direction: column;
-    z-index: 5;
     animation: chatSlideIn 0.2s ease;
 }
 
@@ -2707,7 +2716,15 @@ span.ic > svg.ic {
 .editor-chat-input textarea:focus { outline: none; border-color: #999; }
 
 @media (max-width: 768px) {
-    .editor-chat { width: 100%; max-width: 100%; }
+    /* Sur mobile, le chat couvre l'éditeur (pas la place pour du côte à côte) */
+    .editor-chat {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        max-width: 100%;
+        z-index: 5;
+    }
+    .thought-container.chat-open { max-width: none; }
 }
 
 /* ============================================================

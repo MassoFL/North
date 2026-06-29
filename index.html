@@ -295,6 +295,7 @@
                     <button class="close-btn" onclick="skillsTracker.closeThoughtEditor()">×</button>
                 </div>
             </div>
+            <div class="thought-content-row">
             <div class="thought-body">
                 <div id="thoughtBlocks" class="thought-blocks"></div>
                 <div class="add-block-bar">
@@ -318,6 +319,7 @@
                         onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); skillsTracker.sendChatMessage();}"></textarea>
                     <button class="block-action-btn" id="chatSendBtn" onclick="skillsTracker.sendChatMessage()">Envoyer</button>
                 </div>
+            </div>
             </div>
         </div>
     </div>
