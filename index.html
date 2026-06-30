@@ -342,9 +342,11 @@
         </div>
     </div>
 
-    <!-- Story Player Modal (vidéo consolidée) -->
+    <!-- Story Player Modal (vidéo consolidée, format vertical TikTok 9:16) -->
     <div id="storyPlayerModal" class="modal story-player-modal" style="display: none;">
-        <div class="player-stage" id="playerStage"></div>
+        <div class="player-stage" id="playerStage">
+            <div class="player-frame" id="playerFrame"></div>
+        </div>
         <div class="player-controls">
             <button class="player-btn" id="playerPrev" onclick="skillsTracker.playerPrev()" title="Précédent">⏮</button>
             <button class="player-btn" id="playerPlayPause" onclick="skillsTracker.togglePlayPause()" title="Lecture/Pause">⏸</button>

@@ -3323,7 +3323,8 @@ class SkillsTracker {
         const v = document.querySelector('#playerStage video');
         if (v) { try { v.pause(); } catch (e) {} }
         document.getElementById('storyPlayerModal').style.display = 'none';
-        document.getElementById('playerStage').innerHTML = '';
+        const frame = document.getElementById('playerFrame');
+        if (frame) frame.innerHTML = '';
         this.playerPaused = false;
     }
 
@@ -3416,7 +3417,7 @@ class SkillsTracker {
     }
 
     renderScene(scene) {
-        const stage = document.getElementById('playerStage');
+        const stage = document.getElementById('playerFrame');
         if (!stage) return;
         if (scene.kind === 'title') {
             stage.innerHTML = `<div class="player-title">${this.escapeHtml(scene.text)}</div>`;
