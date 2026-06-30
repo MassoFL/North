@@ -56,6 +56,7 @@ class SkillsTracker {
         this.playerToken = 0;
         this.playerPaused = false;
         this.playerTimer = null;
+        this.playerAudio = null;
         // Chat assistant IA (éditeur d'histoire)
         this.chatMessages = [];
         this._chatLoading = false;
@@ -2739,8 +2740,8 @@ class SkillsTracker {
 
     makeBlock(type) {
         const block = { id: this.genBlockId(), type };
-        if (type === 'text') block.data = { text: '' };
-        else if (type === 'whiteboard') block.data = { elements: [], appState: {}, files: {}, preview: null };
+        if (type === 'text') block.data = { text: '', audio: null };
+        else if (type === 'whiteboard') block.data = { elements: [], appState: {}, files: {}, preview: null, audio: null };
         else if (type === 'carousel') block.data = { images: [] };
         else if (type === 'video') block.data = { url: '', path: '', mime: '' };
         else block.data = {};
@@ -2830,19 +2831,24 @@ class SkillsTracker {
         let body = '';
 
         if (block.type === 'text') {
-            body = `<textarea class="block-text-input" placeholder="Écrivez votre texte…" oninput="skillsTracker.updateTextBlock('${block.id}', this.value)">${this.escapeHtml(block.data.text || '')}</textarea>`;
+            body = `<textarea class="block-text-input" placeholder="Écrivez votre texte…" oninput="skillsTracker.updateTextBlock('${block.id}', this.value)">${this.escapeHtml(block.data.text || '')}</textarea>
+                ${this.audioControlHtml(block.id, block.data.audio, -1)}`;
         } else if (block.type === 'whiteboard') {
             const preview = block.data && block.data.preview;
             body = `<div class="block-wb">
                 ${preview ? `<img src="${preview}" class="block-wb-preview" alt="Aperçu du tableau">` : `<div class="block-wb-empty">Aucun dessin pour l'instant</div>`}
                 <button class="block-action-btn" onclick="skillsTracker.openBlockWhiteboard('${block.id}')">${preview ? 'Modifier le tableau' : 'Dessiner'}</button>
-            </div>`;
+            </div>
+            ${this.audioControlHtml(block.id, block.data.audio, -1)}`;
         } else if (block.type === 'carousel') {
-            const thumbs = (block.data.images || []).map((img, i) =>
-                `<div class="block-thumb"><img src="${img.url}" alt=""><button class="thumb-remove" title="Retirer" onclick="skillsTracker.removeCarouselImage('${block.id}', ${i})">×</button></div>`
+            const rows = (block.data.images || []).map((img, i) =>
+                `<div class="block-img-row">
+                    <div class="block-thumb"><img src="${img.url}" alt=""><button class="thumb-remove" title="Retirer" onclick="skillsTracker.removeCarouselImage('${block.id}', ${i})">×</button></div>
+                    <div class="block-img-audio">${this.audioControlHtml(block.id, img.audio, i)}</div>
+                </div>`
             ).join('');
             body = `<div class="block-carousel-edit">
-                <div class="block-thumbs">${thumbs}${block._uploading ? '<div class="block-thumb uploading">…</div>' : ''}</div>
+                <div class="block-img-list">${rows}${block._uploading ? '<div class="block-img-row uploading">Téléversement…</div>' : ''}</div>
                 <label class="block-action-btn file-label">＋ Ajouter des photos
                     <input type="file" accept="image/*" multiple style="display:none" onchange="skillsTracker.handleCarouselUpload('${block.id}', this)">
                 </label>
@@ -2909,7 +2915,7 @@ class SkillsTracker {
             for (const file of files) {
                 if (!file.type.startsWith('image/')) continue;
                 const media = await this.uploadMedia(file);
-                block.data.images.push(media);
+                block.data.images.push({ url: media.url, path: media.path, audio: null });
             }
         } catch (e) {
             console.error('Carousel upload error:', e);
@@ -2927,6 +2933,63 @@ class SkillsTracker {
         block.data.images.splice(index, 1);
         this.renderEditorBlocks();
         if (img && img.path) this.deleteMedia(img.path);
+        if (img && img.audio && img.audio.path) this.deleteMedia(img.audio.path);
+    }
+
+    // ---- Audio attaché à un texte / une image (lu pendant l'affichage) ----
+
+    audioControlHtml(blockId, audio, imageIndex) {
+        if (audio && audio.url) {
+            return `<div class="block-audio">
+                <audio src="${audio.url}" controls preload="none"></audio>
+                <button class="audio-remove" title="Retirer l'audio" onclick="skillsTracker.removeBlockAudio('${blockId}', ${imageIndex})">×</button>
+            </div>`;
+        }
+        return `<label class="block-audio-add">🎵 Ajouter un audio
+            <input type="file" accept="audio/*" style="display:none" onchange="skillsTracker.handleBlockAudioUpload('${blockId}', this, ${imageIndex})">
+        </label>`;
+    }
+
+    async handleBlockAudioUpload(blockId, input, imageIndex) {
+        const file = (input.files || [])[0];
+        input.value = '';
+        if (!file) return;
+        if (!file.type.startsWith('audio/')) { alert('Veuillez choisir un fichier audio.'); return; }
+        const block = this.editorBlocks.find(b => b.id === blockId);
+        if (!block) return;
+        block._uploading = true;
+        this.renderEditorBlocks();
+        try {
+            const media = await this.uploadMedia(file);
+            if (imageIndex >= 0) {
+                const img = block.data.images[imageIndex];
+                if (img) { if (img.audio && img.audio.path) this.deleteMedia(img.audio.path); img.audio = media; }
+            } else {
+                if (block.data.audio && block.data.audio.path) this.deleteMedia(block.data.audio.path);
+                block.data.audio = media;
+            }
+        } catch (e) {
+            console.error('Audio upload error:', e);
+            alert('Erreur lors du téléversement de l\'audio: ' + e.message);
+        } finally {
+            block._uploading = false;
+            this.renderEditorBlocks();
+        }
+    }
+
+    removeBlockAudio(blockId, imageIndex) {
+        const block = this.editorBlocks.find(b => b.id === blockId);
+        if (!block) return;
+        let removed = null;
+        if (imageIndex >= 0) {
+            const img = block.data.images[imageIndex];
+            if (img) { removed = img.audio; img.audio = null; }
+        } else {
+            removed = block.data.audio;
+            block.data.audio = null;
+        }
+        this.renderEditorBlocks();
+        if (removed && removed.path) this.deleteMedia(removed.path);
     }
 
     async handleVideoUpload(blockId, input) {
@@ -3227,11 +3290,11 @@ class SkillsTracker {
         if (thought.title) scenes.push({ kind: 'title', text: thought.title });
         (thought.blocks || []).forEach(b => {
             if (b.type === 'text' && (b.data.text || '').trim()) {
-                scenes.push({ kind: 'text', text: b.data.text });
+                scenes.push({ kind: 'text', text: b.data.text, audio: b.data.audio ? b.data.audio.url : null });
             } else if (b.type === 'whiteboard' && b.data.preview) {
-                scenes.push({ kind: 'image', url: b.data.preview });
+                scenes.push({ kind: 'image', url: b.data.preview, audio: b.data.audio ? b.data.audio.url : null });
             } else if (b.type === 'carousel') {
-                (b.data.images || []).forEach(img => scenes.push({ kind: 'image', url: img.url }));
+                (b.data.images || []).forEach(img => scenes.push({ kind: 'image', url: img.url, audio: img.audio ? img.audio.url : null }));
             } else if (b.type === 'video' && b.data.url) {
                 scenes.push({ kind: 'video', url: b.data.url });
             }
@@ -3245,9 +3308,6 @@ class SkillsTracker {
             alert('Cette story n\'a pas de contenu à lire.');
             return;
         }
-        // Pré-charge les voix de synthèse vocale
-        try { window.speechSynthesis && window.speechSynthesis.getVoices(); } catch (e) {}
-
         this.playerIndex = 0;
         this.playerPaused = false;
         const btn = document.getElementById('playerPlayPause');
@@ -3259,7 +3319,7 @@ class SkillsTracker {
     closeStoryPlayer() {
         this.clearPlayerTimer();
         this.playerToken++; // invalide toute avance en attente
-        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+        this.stopPlayerAudio();
         const v = document.querySelector('#playerStage video');
         if (v) { try { v.pause(); } catch (e) {} }
         document.getElementById('storyPlayerModal').style.display = 'none';
@@ -3271,9 +3331,18 @@ class SkillsTracker {
         if (this.playerTimer) { clearTimeout(this.playerTimer); this.playerTimer = null; }
     }
 
+    stopPlayerAudio() {
+        if (this.playerAudio) {
+            try { this.playerAudio.pause(); } catch (e) {}
+            this.playerAudio.onended = null;
+            this.playerAudio.onerror = null;
+            this.playerAudio = null;
+        }
+    }
+
     playScene(index) {
         this.clearPlayerTimer();
-        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+        this.stopPlayerAudio();
 
         if (index >= this.playerScenes.length) { this.closeStoryPlayer(); return; }
         if (index < 0) index = 0;
@@ -3295,49 +3364,30 @@ class SkillsTracker {
             }
         };
 
-        if (scene.kind === 'title' || scene.kind === 'text') {
-            this.speak(scene.text, token, advance);
-        } else if (scene.kind === 'image') {
-            this.playerTimer = setTimeout(advance, 3800);
-        } else if (scene.kind === 'video') {
+        if (scene.kind === 'video') {
             const v = document.querySelector('#playerStage video');
             if (!v) { this.playerTimer = setTimeout(advance, 3000); return; }
             v.onended = advance;
             v.onerror = () => { this.playerTimer = setTimeout(advance, 800); };
             const p = v.play();
             if (p && p.catch) p.catch(() => { this.playerTimer = setTimeout(advance, 3000); });
+            return;
         }
-    }
 
-    speak(text, token, onEnd) {
-        const synth = window.speechSynthesis;
-        const estimate = Math.min(20000, Math.max(2600, text.length * 75));
-        if (!synth) { this.playerTimer = setTimeout(onEnd, estimate); return; }
-
-        try {
-            synth.cancel();
-            const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'en-US';
-            const voice = this.pickEnglishVoice();
-            if (voice) u.voice = voice;
-            u.onend = () => { if (token === this.playerToken && !this.playerPaused) onEnd(); };
-            u.onerror = () => { if (token === this.playerToken && !this.playerPaused) onEnd(); };
-            this.currentUtterance = u;
-            synth.speak(u);
-            // Filet de sécurité si onend ne se déclenche jamais (bug navigateur)
-            this.playerTimer = setTimeout(() => {
-                if (token === this.playerToken && !this.playerPaused) onEnd();
-            }, estimate + 4000);
-        } catch (e) {
-            this.playerTimer = setTimeout(onEnd, estimate);
+        // Titre / Texte / Image : si un audio est attaché, on le joue et on avance à la fin ;
+        // sinon on affiche pendant une durée par défaut.
+        const defaultMs = scene.kind === 'title' ? 3000 : (scene.kind === 'text' ? 5000 : 3800);
+        if (scene.audio) {
+            this.stopPlayerAudio();
+            const a = new Audio(scene.audio);
+            this.playerAudio = a;
+            a.onended = advance;
+            a.onerror = () => { this.playerTimer = setTimeout(advance, defaultMs); };
+            const p = a.play();
+            if (p && p.catch) p.catch(() => { this.playerTimer = setTimeout(advance, defaultMs); });
+        } else {
+            this.playerTimer = setTimeout(advance, defaultMs);
         }
-    }
-
-    pickEnglishVoice() {
-        try {
-            const voices = window.speechSynthesis.getVoices() || [];
-            return voices.find(v => /^en[-_]?/i.test(v.lang)) || null;
-        } catch (e) { return null; }
     }
 
     playerNext() { this.playScene(this.playerIndex + 1); }
@@ -3345,14 +3395,13 @@ class SkillsTracker {
 
     togglePlayPause() {
         const btn = document.getElementById('playerPlayPause');
-        const synth = window.speechSynthesis;
         const v = document.querySelector('#playerStage video');
         this.playerPaused = !this.playerPaused;
 
         if (this.playerPaused) {
             if (btn) btn.textContent = '▶';
             this.clearPlayerTimer();
-            try { synth && synth.cancel(); } catch (e) {}
+            this.stopPlayerAudio();
             if (v) { try { v.pause(); } catch (e) {} }
         } else {
             if (btn) btn.textContent = '⏸';

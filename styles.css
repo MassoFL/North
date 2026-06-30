@@ -2458,6 +2458,54 @@ span.ic > svg.ic {
 .block-video-edit { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
 .block-video { width: 100%; max-height: 360px; border-radius: 8px; background: #000; }
 
+/* Carrousel (éditeur) — liste verticale image + audio */
+.block-img-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.block-img-row { display: flex; align-items: center; gap: 12px; }
+.block-img-row.uploading { color: #999; font-size: 13px; padding: 8px 0; }
+.block-img-row .block-thumb { flex-shrink: 0; }
+.block-img-audio { flex: 1; min-width: 0; }
+
+/* Audio attaché (texte / image) */
+.block-audio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+.block-audio audio {
+    height: 38px;
+    max-width: 100%;
+    flex: 1;
+    min-width: 0;
+}
+.audio-remove {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border: 1px solid #e6b0aa;
+    background: #fff;
+    color: #c0392b;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+}
+.audio-remove:hover { background: #fdecec; }
+.block-audio-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 7px 12px;
+    background: #f0f0f0;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #444;
+}
+.block-audio-add:hover { background: #e6e6e6; }
+
 /* ============================================================
    THOUGHT — Visionneuse (mur en lecture)
    ============================================================ */
