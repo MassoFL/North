@@ -104,11 +104,21 @@ body::before {
 .header {
     position: relative;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 40px;
     padding-bottom: 20px;
     border-bottom: 1px solid #e0e0e0;
+}
+
+/* Titre centré, indépendamment du logo (à gauche) et du menu (à droite) */
+.header .site-title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    white-space: nowrap;
 }
 
 .header-brand {
@@ -1116,7 +1126,7 @@ h1 {
     
     .header {
         flex-direction: row;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
         margin-bottom: 30px;
     }
@@ -1207,7 +1217,7 @@ h1 {
         margin-bottom: 24px;
         padding-bottom: 16px;
         flex-direction: row;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
     }
 
