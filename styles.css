@@ -102,8 +102,9 @@ body::before {
 
 /* Header */
 .header {
+    position: relative;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-bottom: 40px;
     padding-bottom: 20px;
@@ -130,6 +131,10 @@ h1 {
 }
 
 .user-info {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
     gap: 15px;
@@ -1111,11 +1116,11 @@ h1 {
     
     .header {
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
         margin-bottom: 30px;
     }
-    
+
     .logo {
         height: 36px;
     }
@@ -1202,10 +1207,10 @@ h1 {
         margin-bottom: 24px;
         padding-bottom: 16px;
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
     }
-    
+
     .header-brand {
         gap: 8px;
     }
